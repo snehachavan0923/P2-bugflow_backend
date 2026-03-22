@@ -8,6 +8,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.bugflow.entity.User;
+import com.bugflow.exception.BadRequestException;
+import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.entity.Role;
 import com.bugflow.repository.UserRepository;
 import com.bugflow.dto.LoginRequest;
@@ -31,8 +33,11 @@ public class AuthService {
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BadRequestException("Email already registered");
+        }
 
-        // ✅ FIXED
+        //  FIXED
         user.setRole(Role.Owner); 
 
         return userRepository.save(user);
@@ -41,13 +46,12 @@ public class AuthService {
     public Map<String, Object> login(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new BadRequestException("Invalid password");
         }
 
-        // ✅ FIXED
         String token = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getRole().name()
