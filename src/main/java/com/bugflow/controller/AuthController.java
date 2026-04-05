@@ -13,8 +13,7 @@ import com.bugflow.entity.User;
 
 
 @RestController
-@RequestMapping("/api/auth")
-@CrossOrigin("*")
+@RequestMapping("/auth")
 public class AuthController {
 
     @Autowired
