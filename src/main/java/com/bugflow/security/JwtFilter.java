@@ -31,7 +31,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
 
         // Skip auth endpoints
-        if (path.startsWith("/api/auth")) {
+        if (path.startsWith("/auth")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -50,7 +50,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
-                                userDetails,
+                        		  email,  
                                 null,
                                 userDetails.getAuthorities()
                         );

@@ -15,7 +15,7 @@ public class JwtUtil {
 
     public String generateToken(String email, String role) {
         return Jwts.builder()
-                .setSubject(email)   // ✅ FIXED
+                .setSubject(email)   
                 .claim("role", role)
                 .setIssuedAt(new Date())
                 .signWith(key)

@@ -76,4 +76,21 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
+    
+    @ExceptionHandler(CloudinaryException.class)
+    public ResponseEntity<ApiError> handleCloudinary(
+            CloudinaryException ex,
+            HttpServletRequest request
+    ) {
+        return new ResponseEntity<>(
+                new ApiError(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "Upload Failed",
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                ),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    }
 }

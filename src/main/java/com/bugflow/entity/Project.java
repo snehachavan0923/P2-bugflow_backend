@@ -1,10 +1,10 @@
 package com.bugflow.entity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-
 
 @Document(collection = "projects")
 public class Project {
@@ -14,48 +14,30 @@ public class Project {
 
     private String name;
     private String description;
-    private String ownerId;
+
+    private String ownerId; // user who created project
+
+    private List<String> teamMembers;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-	public String getId() {
-		return id;
-	}
+    // getters & setters
 
-	public void setId(String id) {
-		this.id = id;
-	}
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-	public String getDescription() {
-		return description;
-	}
+    public String getOwnerId() { return ownerId; }
+    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    public List<String> getTeamMembers() { return teamMembers; }
+    public void setTeamMembers(List<String> teamMembers) { this.teamMembers = teamMembers; }
 
-	public String getOwnerId() {
-		return ownerId;
-	}
-
-	public void setOwnerId(String ownerId) {
-		this.ownerId = ownerId;
-	}
-
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
-
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
-    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
