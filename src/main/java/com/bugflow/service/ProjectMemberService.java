@@ -9,6 +9,9 @@ import com.bugflow.dto.AddMemberRequest;
 import com.bugflow.entity.ProjectMember;
 import com.bugflow.entity.Role;
 import com.bugflow.entity.User;
+import com.bugflow.exception.BadRequestException;
+import com.bugflow.exception.ResourceNotFoundException;
+import com.bugflow.exception.UnauthorizedException;
 import com.bugflow.repository.ProjectMemberRepository;
 import com.bugflow.repository.ProjectRepository;
 import com.bugflow.repository.UserRepository;
@@ -39,13 +42,13 @@ public class ProjectMemberService {
 
         projectRepository.findById(projectId)
                 .orElseThrow(() ->
-                        new RuntimeException("Project not found"));
+                        new ResourceNotFoundException("Project not found"));
 
         if (projectMemberRepository.existsByProjectIdAndEmail(
                 projectId,
                 request.getEmail())) {
 
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Member already exists in this project");
         }
 
@@ -88,7 +91,7 @@ public class ProjectMemberService {
 
         projectRepository.findById(projectId)
                 .orElseThrow(() ->
-                        new RuntimeException("Project not found"));
+                        new ResourceNotFoundException("Project not found"));
 
         return projectMemberRepository.findByProjectId(projectId);
     }
@@ -100,7 +103,7 @@ public class ProjectMemberService {
         ProjectMember member =
                 projectMemberRepository.findById(memberId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Member not found"));
 
         member.setRole(role);
@@ -115,12 +118,12 @@ public class ProjectMemberService {
         ProjectMember member =
                 projectMemberRepository.findById(memberId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Member not found"));
 
         if (!member.getProjectId().equals(projectId)) {
 
-            throw new RuntimeException(
+            throw new UnauthorizedException(
                     "Member does not belong to this project");
         }
 

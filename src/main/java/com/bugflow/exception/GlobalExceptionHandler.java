@@ -50,13 +50,31 @@ public class GlobalExceptionHandler {
     ) {
         return new ResponseEntity<>(
                 new ApiError(
-                        HttpStatus.UNAUTHORIZED.value(),
-                        "Unauthorized",
+                        HttpStatus.FORBIDDEN.value(),
+                        "Forbidden",
                         ex.getMessage(),
                         request.getRequestURI(),
                         LocalDateTime.now()
                 ),
-                HttpStatus.UNAUTHORIZED
+                HttpStatus.FORBIDDEN
+        );
+    }
+    
+    @ExceptionHandler(
+            org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException ex,
+            HttpServletRequest request) {
+
+        return new ResponseEntity<>(
+                new ApiError(
+                        HttpStatus.FORBIDDEN.value(),
+                        "Forbidden",
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                ),
+                HttpStatus.FORBIDDEN
         );
     }
 

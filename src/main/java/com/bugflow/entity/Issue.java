@@ -18,8 +18,13 @@ public class Issue {
 
     private String priority;
     private String status;
-
-    private String assignedTo;
+    private String assignedToName;
+    private String assignedToUserId;
+    private String assignedToEmail;
+    private String assignedToRole;
+    private String developerId;
+    private String developerName;
+    private String developerEmail;
     private String createdBy;
 
     private String imageUrl; 
@@ -70,12 +75,6 @@ public class Issue {
 	public void setStatus(String status) {
 		this.status = status;
 	}
-	public String getAssignedTo() {
-		return assignedTo;
-	}
-	public void setAssignedTo(String assignedTo) {
-		this.assignedTo = assignedTo;
-	}
 	public String getCreatedBy() {
 		return createdBy;
 	}
@@ -106,5 +105,49 @@ public class Issue {
 	public void setResolutionImageUrl(String resolutionImageUrl) {
 		this.resolutionImageUrl = resolutionImageUrl;
 	}
+	public String getAssignedToUserId() {
+		return assignedToUserId;
+	}
+	public void setAssignedToUserId(String assignedToUserId) {
+		this.assignedToUserId = assignedToUserId;
+	}
+	public String getAssignedToEmail() {
+		return assignedToEmail;
+	}
+	public void setAssignedToEmail(String assignedToEmail) {
+		this.assignedToEmail = assignedToEmail;
+	}
+	public String getAssignedToRole() {
+		return assignedToRole;
+	}
+	public void setAssignedToRole(String assignedToRole) {
+		this.assignedToRole = assignedToRole;
+	}
+	public String getAssignedToName() {
+		return assignedToName;
+	}
+	public void setAssignedToName(String assignedToName) {
+		this.assignedToName = assignedToName;
+	}
+	public String getDeveloperId() {
+		return developerId;
+	}
+	public void setDeveloperId(String developerId) {
+		this.developerId = developerId;
+	}
+	public String getDeveloperName() {
+		return developerName;
+	}
+	public void setDeveloperName(String developerName) {
+		this.developerName = developerName;
+	}
+	public String getDeveloperEmail() {
+		return developerEmail;
+	}
+	public void setDeveloperEmail(String developerEmail) {
+		this.developerEmail = developerEmail;
+	}
+	
+	
     
 }

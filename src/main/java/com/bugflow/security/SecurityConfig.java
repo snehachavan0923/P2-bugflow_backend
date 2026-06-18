@@ -2,7 +2,9 @@ package com.bugflow.security;
 
 import java.util.List;
 
+
 import org.springframework.context.annotation.*;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -36,11 +38,83 @@ public class SecurityConfig {
             .httpBasic(httpBasic -> httpBasic.disable())
 
             .authorizeHttpRequests(auth -> auth
-            		.requestMatchers("/auth/**").permitAll()
-            		.requestMatchers("/projects/**").authenticated() 
-            		.anyRequest().authenticated()
-            )
 
+            	    .requestMatchers(HttpMethod.OPTIONS, "/**")
+            	    .permitAll()
+
+            	    .requestMatchers("/auth/**")
+            	    .permitAll()
+
+            	    // OWNER
+            	    .requestMatchers(HttpMethod.POST,
+            	            "/projects")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.POST,
+            	            "/projects/*/team")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.PUT,
+            	            "/projects/*/team/*")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.DELETE,
+            	            "/projects/*/team/*")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.GET,
+            	            "/projects/*/team")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.POST,
+            	            "/projects/*/issues")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.PUT,
+            	            "/projects/*/issues/*")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(HttpMethod.DELETE,
+            	            "/projects/*/issues/*")
+            	    .hasRole("Owner")
+
+            	    // DEVELOPER
+            	    .requestMatchers(HttpMethod.GET,
+            	            "/projects/*/issues/my-tasks")
+            	    .hasRole("Developer")
+
+            	    .requestMatchers(HttpMethod.PUT,
+            	            "/projects/*/issues/*/status")
+            	    .hasRole("Developer")
+
+            	    .requestMatchers(HttpMethod.PUT,
+            	            "/projects/*/issues/*/resolve")
+            	    .hasRole("Developer")
+
+            	    // TESTER
+            	    .requestMatchers(HttpMethod.GET,
+            	            "/projects/*/issues/review")
+            	    .hasRole("Tester")
+
+            	    .requestMatchers(HttpMethod.PUT,
+            	            "/projects/*/issues/*/approve")
+            	    .hasRole("Tester")
+
+            	    .requestMatchers(HttpMethod.PUT,
+            	            "/projects/*/issues/*/reject")
+            	    .hasRole("Tester")
+
+            	    // VIEW PROJECTS
+            	    .requestMatchers(HttpMethod.GET,
+            	            "/projects/**")
+            	    .hasAnyRole(
+            	            "Owner",
+            	            "Developer",
+            	            "Tester",
+            	            "Viewer")
+
+            	    .anyRequest().authenticated()
+            	)
             //  JWT filter
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
