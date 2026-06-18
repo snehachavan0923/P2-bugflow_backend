@@ -11,6 +11,8 @@ public interface ProjectMemberRepository
 
     List<ProjectMember> findByProjectId(String projectId);
 
+    List<ProjectMember> findByEmail(String email);
+
     boolean existsByProjectIdAndEmail(
             String projectId,
             String email);

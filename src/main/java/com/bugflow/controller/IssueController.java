@@ -1,5 +1,5 @@
 package com.bugflow.controller;
-
+import org.springframework.security.core.Authentication;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +47,18 @@ public class IssueController {
     public ResponseEntity<List<Issue>> getIssues(@PathVariable String projectId) {
         return ResponseEntity.ok(issueService.getIssuesByProject(projectId));
     }
+    
+    {/* @GetMapping("/my-tasks")
+    public ResponseEntity<List<Issue>> getMyTasks(
+            Authentication authentication) {
+
+        String email =
+                authentication.getName();
+
+        return ResponseEntity.ok(
+                issueService.getMyIssues(email));
+    } */}
+    
 
     @PutMapping("/{issueId}/status")
     public ResponseEntity<Issue> updateStatus(
@@ -82,5 +94,77 @@ public class IssueController {
     public ResponseEntity<String> deleteIssue(@PathVariable String issueId) {
         issueService.deleteIssue(issueId);
         return ResponseEntity.ok("Deleted");
+    }
+    
+  @GetMapping("/all")
+    public ResponseEntity<List<Issue>>
+    getAllIssues() {
+
+        return ResponseEntity.ok(
+                issueService.getAllIssues());
+    }
+    
+  {/* @GetMapping("/review")
+    public ResponseEntity<List<Issue>>
+    getReviewIssues(
+            Authentication authentication) {
+
+        String email =
+                authentication.getName();
+
+        return ResponseEntity.ok(
+                issueService.getReviewIssues(
+                        email));
+    } */}
+    
+    @GetMapping("/project-my-tasks")
+    public ResponseEntity<List<Issue>>
+    getProjectTasks(
+            @PathVariable String projectId,
+            Authentication authentication) {
+
+        String email =
+                authentication.getName();
+
+        return ResponseEntity.ok(
+                issueService.getMyIssuesByProject(
+                        projectId,
+                        email));
+    }
+    
+    @GetMapping("/project-review")
+    public ResponseEntity<List<Issue>>
+    getProjectReviewIssues(
+            @PathVariable String projectId,
+            Authentication authentication) {
+
+        String email =
+                authentication.getName();
+
+        return ResponseEntity.ok(
+                issueService.getReviewIssuesByProject(
+                        projectId,
+                        email));
+    }
+    
+    
+    @PutMapping("/{issueId}/approve")
+    public ResponseEntity<Issue>
+    approveIssue(
+            @PathVariable String issueId) {
+
+        return ResponseEntity.ok(
+                issueService.approveIssue(
+                        issueId));
+    }
+    
+    @PutMapping("/{issueId}/reject")
+    public ResponseEntity<Issue>
+    rejectIssue(
+            @PathVariable String issueId) {
+
+        return ResponseEntity.ok(
+                issueService.rejectIssue(
+                        issueId));
     }
 }

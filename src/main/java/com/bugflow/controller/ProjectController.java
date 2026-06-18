@@ -17,7 +17,6 @@ public class ProjectController {
     @Autowired
     private ProjectService projectService;
 
-    // ✅ CREATE PROJECT
     @PostMapping
     public ResponseEntity<Project> createProject(
             @RequestBody Project project,
@@ -27,21 +26,30 @@ public class ProjectController {
 
         project.setOwnerId(email);
 
-        return ResponseEntity.ok(projectService.createProject(project));
+        return ResponseEntity.ok(
+                projectService.createProject(project));
     }
 
-    // ✅ GET ONLY USER PROJECTS
     @GetMapping
-    public ResponseEntity<List<Project>> getProjects(Authentication authentication) {
+    public ResponseEntity<List<Project>> getProjects(
+            Authentication authentication) {
 
         String email = authentication.getName();
 
-        return ResponseEntity.ok(projectService.getProjectsByOwner(email));
+        return ResponseEntity.ok(
+                projectService.getProjectsForUser(email));
     }
 
-    // ✅ GET SINGLE PROJECT
     @GetMapping("/{id}")
-    public ResponseEntity<Project> getProject(@PathVariable String id) {
-        return ResponseEntity.ok(projectService.getProjectById(id));
+    public ResponseEntity<Project> getProject(
+            @PathVariable String id,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        return ResponseEntity.ok(
+                projectService.getProjectForUser(
+                        id,
+                        email));
     }
 }
