@@ -51,7 +51,7 @@ public class AuthService {
 
             if (!passwordEncoder.matches(
                     request.getPassword(),
-                    user.getPassword())) {
+                    user.getPassword())) { 
 
                 throw new BadRequestException("Invalid password");
             }
@@ -68,7 +68,10 @@ public class AuthService {
             response.put("id", user.getId());
             response.put("name", user.getName());
             response.put("email", user.getEmail());
-            response.put("role", user.getRole());
+            response.put("role", user.getRole()); 
+            response.put(
+            		"organizationId",
+            		user.getOrganizationId());
 
             return response;
         }

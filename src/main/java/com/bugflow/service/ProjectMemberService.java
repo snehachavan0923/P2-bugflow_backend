@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.bugflow.dto.AddMemberRequest;
+import com.bugflow.entity.Project;
 import com.bugflow.entity.ProjectMember;
 import com.bugflow.entity.Role;
 import com.bugflow.entity.User;
@@ -30,7 +31,7 @@ public class ProjectMemberService {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder) {
 
-        this.projectMemberRepository = projectMemberRepository;
+        this.projectMemberRepository = projectMemberRepository; 
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -39,10 +40,6 @@ public class ProjectMemberService {
     public ProjectMember addMember(
             String projectId,
             AddMemberRequest request) {
-
-        projectRepository.findById(projectId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Project not found"));
 
         if (projectMemberRepository.existsByProjectIdAndEmail(
                 projectId,
@@ -57,6 +54,38 @@ public class ProjectMemberService {
                         request.getEmail())
                         .orElse(null);
 
+        Project project =
+                projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Project not found"));
+
+        if(user != null) {
+
+            if(user.getOrganizationId() != null &&
+               !user.getOrganizationId()
+                    .equals(project.getOrganizationId())) {
+
+                throw new BadRequestException(
+                        "User belongs to another organization");
+            }
+
+            if(user.getOrganizationId() == null) {
+
+                user.setOrganizationId(
+                        project.getOrganizationId());
+
+                userRepository.save(user);
+            }
+        }
+        
+        if(user != null &&
+        		   user.getRole() == Role.Owner) {
+
+        		    throw new BadRequestException(
+        		            "Owners cannot be added as project members");
+        		}
+
         if (user == null) {
 
             user = new User();
@@ -70,6 +99,9 @@ public class ProjectMemberService {
 
             user.setRole(request.getRole());
 
+            user.setOrganizationId(
+                    project.getOrganizationId());
+
             user = userRepository.save(user);
         }
 
@@ -82,6 +114,8 @@ public class ProjectMemberService {
         member.setEmail(user.getEmail());
 
         member.setRole(request.getRole());
+        member.setOrganizationId(
+                project.getOrganizationId());
 
         return projectMemberRepository.save(member);
     }
@@ -127,6 +161,20 @@ public class ProjectMemberService {
                     "Member does not belong to this project");
         }
 
+        User user =
+                userRepository.findById(
+                        member.getUserId())
+                .orElse(null);
+
         projectMemberRepository.delete(member);
+
+        if(user != null &&
+           !projectMemberRepository.existsByUserId(
+                   user.getId())) {
+
+            user.setOrganizationId(null);
+
+            userRepository.save(user);
+        }
     }
 }

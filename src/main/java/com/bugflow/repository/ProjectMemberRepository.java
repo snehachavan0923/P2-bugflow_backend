@@ -1,6 +1,7 @@
 package com.bugflow.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 
@@ -12,6 +13,15 @@ public interface ProjectMemberRepository
     List<ProjectMember> findByProjectId(String projectId);
 
     List<ProjectMember> findByEmail(String email);
+    
+    boolean existsByUserId(
+            String userId);
+    
+    
+    Optional<ProjectMember>
+    findByProjectIdAndUserId(
+            String projectId,
+            String userId);
 
     boolean existsByProjectIdAndEmail(
             String projectId,

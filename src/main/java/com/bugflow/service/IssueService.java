@@ -191,14 +191,16 @@ public class IssueService {
         if(dto.getAssignedToUserId() != null &&
            !dto.getAssignedToUserId().isBlank()) {
 
-            ProjectMember member =
-                    projectMemberRepository.findById(
-                            dto.getAssignedToUserId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Assigned member not found"));
+        	ProjectMember member =
+        	        projectMemberRepository
+        	            .findByProjectIdAndUserId(
+        	                    issue.getProjectId(),
+        	                    dto.getAssignedToUserId())
+        	            .orElseThrow(() ->
+        	                    new ResourceNotFoundException(
+        	                            "Assigned member not found"));
             
-
+ 
             issue.setAssignedToUserId(
                     member.getUserId());
             issue.setAssignedToName(
@@ -207,17 +209,36 @@ public class IssueService {
             issue.setAssignedToEmail(
                     member.getEmail());
 
-            issue.setAssignedToRole(
-                    member.getRole().name());
+            String role = member.getRole().name();
+
+            issue.setAssignedToRole(role);
+
+            if(role.equals("Developer")) {
+
+                issue.setDeveloperId(
+                        member.getUserId());
+
+                issue.setDeveloperName(
+                        member.getName());
+
+                issue.setDeveloperEmail(
+                        member.getEmail());
+            }
             
-            issue.setDeveloperId(
-                    member.getUserId());
+            switch(role) {
 
-            issue.setDeveloperName(
-                    member.getName());
+                case "Tester":
+                    issue.setStatus("Review");
+                    break;
 
-            issue.setDeveloperEmail(
-                    member.getEmail());
+                case "Developer":
+                    issue.setStatus("Open");
+                    break;
+
+                default:
+                    break;
+            }
+            
         }
 
         return issueRepository.save(issue);

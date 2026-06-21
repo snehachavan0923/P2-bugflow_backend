@@ -20,6 +20,7 @@ public class Project {
     private List<String> teamMembers;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+    private String organizationId;
 
     // getters & setters
 
@@ -40,4 +41,13 @@ public class Project {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public String getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(
+            String organizationId) {
+        this.organizationId = organizationId;
+    }
 }

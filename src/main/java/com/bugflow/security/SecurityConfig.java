@@ -44,6 +44,26 @@ public class SecurityConfig {
 
             	    .requestMatchers("/auth/**")
             	    .permitAll()
+            	    
+            	    .requestMatchers(
+            	            HttpMethod.POST,
+            	            "/organizations")
+            	    .hasRole("Owner")
+
+            	    .requestMatchers(
+            	            HttpMethod.GET,
+            	            "/organizations/me")
+            	    .authenticated()
+            	    
+            	    .requestMatchers(
+            	            HttpMethod.GET,
+            	            "/organizations/members")
+            	    .hasRole("Owner")
+            	    
+            	    .requestMatchers(
+            	            HttpMethod.GET,
+            	            "/organizations/settings")
+            	    .hasRole("Owner")
 
             	    // OWNER
             	    .requestMatchers(HttpMethod.POST,
@@ -85,16 +105,25 @@ public class SecurityConfig {
 
             	    .requestMatchers(HttpMethod.PUT,
             	            "/projects/*/issues/*/status")
-            	    .hasRole("Developer")
+            	    .hasAnyRole("Developer", "Owner")
 
             	    .requestMatchers(HttpMethod.PUT,
             	            "/projects/*/issues/*/resolve")
             	    .hasRole("Developer")
+            	    .requestMatchers(
+            	            HttpMethod.GET,
+            	            "/projects/*/issues/project-my-tasks")
+            	    .hasRole("Developer")
+
+            	    .requestMatchers(
+            	            HttpMethod.GET,
+            	            "/projects/*/issues/project-review")
+            	    .hasRole("Tester")
 
             	    // TESTER
             	    .requestMatchers(HttpMethod.GET,
             	            "/projects/*/issues/review")
-            	    .hasRole("Tester")
+            	    .hasRole("Tester") 
 
             	    .requestMatchers(HttpMethod.PUT,
             	            "/projects/*/issues/*/approve")
