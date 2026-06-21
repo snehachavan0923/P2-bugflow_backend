@@ -23,6 +23,8 @@ public class ProjectMember {
 
     private LocalDateTime joinedAt;
 
+    private String organizationId;
+    
     public ProjectMember() {
         this.joinedAt = LocalDateTime.now();
     }
@@ -83,5 +85,12 @@ public class ProjectMember {
 		this.joinedAt = joinedAt;
 	}
 
-    
+	public String getOrganizationId() {
+	    return organizationId;
+	}
+
+	public void setOrganizationId(
+	        String organizationId) {
+	    this.organizationId = organizationId;
+	}
 }

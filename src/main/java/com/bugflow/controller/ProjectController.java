@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.bugflow.entity.Project;
+import com.bugflow.entity.User;
+import com.bugflow.repository.UserRepository;
 import com.bugflow.service.ProjectService;
 
 @RestController
@@ -16,15 +18,26 @@ public class ProjectController {
 
     @Autowired
     private ProjectService projectService;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<Project> createProject(
             @RequestBody Project project,
             Authentication authentication) {
 
-        String email = authentication.getName();
+    	String email = authentication.getName();
 
-        project.setOwnerId(email);
+    	User owner =
+    	        userRepository.findByEmail(email)
+    	        .orElseThrow();
+
+    	project.setOwnerId(
+    	        owner.getId());
+
+    	project.setOrganizationId(
+    	        owner.getOrganizationId());
 
         return ResponseEntity.ok(
                 projectService.createProject(project));

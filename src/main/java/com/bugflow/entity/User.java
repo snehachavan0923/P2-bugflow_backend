@@ -16,6 +16,8 @@ public class User {
     private String email;
     private String password;
     private Role role;
+    
+    private String organizationId;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -69,6 +71,13 @@ public class User {
 		this.role = role;
 	}
 
-	
+	public String getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(
+            String organizationId) {
+        this.organizationId = organizationId;
+    }
     
 }

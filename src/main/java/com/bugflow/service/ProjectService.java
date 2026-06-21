@@ -1,79 +1,104 @@
 package com.bugflow.service;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.bugflow.entity.Project;
 import com.bugflow.entity.ProjectMember;
+import com.bugflow.entity.User;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.exception.UnauthorizedException;
 import com.bugflow.repository.ProjectMemberRepository;
 import com.bugflow.repository.ProjectRepository;
+import com.bugflow.repository.UserRepository;
 
 @Service
 public class ProjectService {
 
-    @Autowired
+    @Autowired 
     private ProjectRepository projectRepository;
 
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     public Project createProject(Project project) {
 
-        if (project.getName() == null ||
-            project.getName().isBlank()) {
+    	User owner =
+    	        userRepository.findById(
+    	                project.getOwnerId())
+    	        .orElseThrow(() ->
+    	                new ResourceNotFoundException(
+    	                        "Owner not found"));
+
+        if(owner.getOrganizationId() == null) {
+
+            throw new BadRequestException(
+                    "Please create an organization first");
+        }
+
+        if(project.getName() == null ||
+           project.getName().isBlank()) {
 
             throw new BadRequestException(
                     "Project name is required");
         }
 
-        if (project.getDescription() == null ||
-            project.getDescription().isBlank()) {
+        if(project.getDescription() == null ||
+           project.getDescription().isBlank()) {
 
             throw new BadRequestException(
                     "Project description is required");
         }
 
+        project.setOrganizationId(
+                owner.getOrganizationId());
+
         return projectRepository.save(project);
     }
 
-    public List<Project> getProjectsForUser(String email) {
+    public List<Project> getProjectsForUser(
+            String email) {
 
-        List<Project> ownedProjects =
-                projectRepository.findByOwnerId(email);
+        User user =
+                userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found"));
 
+        /*
+         * OWNER
+         */
+        if(user.getRole().name().equals("Owner")) {
+
+            return projectRepository.findByOrganizationId(
+                    user.getOrganizationId());
+        }
+
+        /*
+         * Developer / Tester / Viewer
+         */
         List<ProjectMember> memberships =
-                projectMemberRepository.findByEmail(email);
+                projectMemberRepository.findByEmail(
+                        email);
 
-        Set<String> memberProjectIds =
-                memberships.stream()
-                        .map(ProjectMember::getProjectId)
-                        .collect(Collectors.toSet());
+        List<Project> projects =
+                new ArrayList<>();
 
-        List<Project> memberProjects =
-                projectRepository.findAllById(memberProjectIds);
+        for(ProjectMember member : memberships) {
 
-        Map<String, Project> uniqueProjects =
-                new LinkedHashMap<>();
-
-        for (Project p : ownedProjects) {
-            uniqueProjects.put(p.getId(), p);
+            projectRepository.findById(
+                    member.getProjectId())
+                    .ifPresent(projects::add);
         }
 
-        for (Project p : memberProjects) {
-            uniqueProjects.put(p.getId(), p);
-        }
-
-        return new ArrayList<>(uniqueProjects.values());
+        return projects;
     }
 
     public Project getProjectForUser(
@@ -82,19 +107,37 @@ public class ProjectService {
 
         Project project =
                 projectRepository.findById(projectId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Project not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Project not found"));
+
+        User user =
+                userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found"));
 
         /*
-         * Owner access
+         * Organization Security
          */
-        if (email.equals(project.getOwnerId())) {
-            return project;
+        if(user.getOrganizationId() == null ||
+           !user.getOrganizationId()
+                .equals(project.getOrganizationId())) {
+
+            throw new UnauthorizedException(
+                    "Project belongs to another organization");
         }
 
         /*
-         * Team member access
+         * Owner Access
+         */
+        if(user.getId()
+                .equals(project.getOwnerId())) {
+
+            return project;
+        }
+        /*
+         * Project Member Access
          */
         boolean memberExists =
                 projectMemberRepository
@@ -102,7 +145,7 @@ public class ProjectService {
                                 projectId,
                                 email);
 
-        if (memberExists) {
+        if(memberExists) {
             return project;
         }
 

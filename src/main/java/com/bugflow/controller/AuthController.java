@@ -15,7 +15,7 @@ import com.bugflow.entity.User;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
-
+ 
     @Autowired
     private AuthService authService;
 
