@@ -15,4 +15,5 @@ public interface ProjectRepository extends MongoRepository<Project, String> {
     
     long countByOrganizationId(
             String organizationId);
+    
 } 

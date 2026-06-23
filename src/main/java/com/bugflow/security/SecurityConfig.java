@@ -132,6 +132,14 @@ public class SecurityConfig {
             	    .requestMatchers(HttpMethod.PUT,
             	            "/projects/*/issues/*/reject")
             	    .hasRole("Tester")
+            	    .requestMatchers(
+            	            HttpMethod.GET,
+            	            "/dashboard/**")
+            	    .hasAnyRole(
+            	            "Owner",
+            	            "Developer",
+            	            "Tester",
+            	            "Viewer")
 
             	    // VIEW PROJECTS
             	    .requestMatchers(HttpMethod.GET,

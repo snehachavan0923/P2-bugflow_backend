@@ -16,6 +16,8 @@ List<Issue> findByAssignedToEmail(String email);
 List<Issue> findByStatus(String status);
 
 List<Issue> findByAssignedToRole(String role);
+List<Issue> findByProjectIdIn(
+        List<String> projectIds);
 
 List<Issue> findByAssignedToEmailAndStatus(
     String email,
@@ -29,4 +31,26 @@ List<Issue> findByProjectIdAndAssignedToEmailAndStatus(
     String projectId,
     String email,
     String status);
+
+long countByProjectIdInAndAssignedToUserIdIsNotNull(
+        List<String> projectIds);
+
+long countByProjectIdInAndStatus(
+        List<String> projectIds,
+        String status);
+
+long countByProjectIdIn(
+        List<String> projectIds);
+
+long countByAssignedToEmail(
+        String email);
+
+long countByAssignedToEmailAndStatus(
+        String email,
+        String status);
+
+long countByAssignedToRole(
+        String role);
 }
+
+

@@ -7,17 +7,25 @@ import org.springframework.stereotype.Service;
 
 import com.bugflow.dto.IssueDTO;
 import com.bugflow.entity.Issue;
+import com.bugflow.entity.Project;
 import com.bugflow.entity.ProjectMember;
+import com.bugflow.entity.User;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.repository.IssueRepository;
 import com.bugflow.repository.ProjectMemberRepository;
+import com.bugflow.repository.ProjectRepository;
+import com.bugflow.repository.UserRepository;
 
 @Service
 public class IssueService {
 
     @Autowired
     private IssueRepository issueRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private ProjectRepository projectRepository;
 
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
@@ -36,8 +44,14 @@ public class IssueService {
 
         Issue issue = new Issue();
 
-        issue.setProjectId(projectId);
-        issue.setProjectName(dto.getProjectName());
+        Project project =
+                projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Project not found"));
+
+        issue.setProjectId(projectId); 
+        issue.setProjectName(project.getName());
 
         issue.setTitle(dto.getTitle());
         issue.setDescription(dto.getDescription());
@@ -337,6 +351,38 @@ public class IssueService {
                 "Developer");
 
         return issueRepository.save(issue);
+    }
+    
+    public List<Issue> getOrganizationIssues(
+            String email) {
+
+        User owner =
+                userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found"));
+
+        if(owner.getOrganizationId() == null) {
+
+            throw new ResourceNotFoundException(
+                    "Organization not found");
+        }
+
+        List<Project> projects =
+                projectRepository.findByOrganizationId(
+                        owner.getOrganizationId());
+
+        List<String> projectIds =
+                projects.stream()
+                        .map(Project::getId)
+                        .toList();
+
+        if(projectIds.isEmpty()) {
+            return List.of();
+        }
+
+        return issueRepository.findByProjectIdIn(
+                projectIds);
     }
     
     

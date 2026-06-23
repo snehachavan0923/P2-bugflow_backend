@@ -11,4 +11,5 @@ public interface OrganizationRepository
 
     Optional<Organization>
     findByOwnerId(String ownerId);
+    
 }

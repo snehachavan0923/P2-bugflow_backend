@@ -30,4 +30,7 @@ public interface ProjectMemberRepository
     void deleteByProjectIdAndUserId(
             String projectId,
             String userId);
+    
+    long countByOrganizationId(
+            String organizationId);
 }

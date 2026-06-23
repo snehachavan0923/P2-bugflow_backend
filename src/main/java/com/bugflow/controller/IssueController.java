@@ -151,7 +151,7 @@ public class IssueController {
     @PutMapping("/{issueId}/approve")
     public ResponseEntity<Issue>
     approveIssue(
-            @PathVariable String issueId) {
+            @PathVariable String issueId) { 
 
         return ResponseEntity.ok(
                 issueService.approveIssue(
@@ -167,4 +167,5 @@ public class IssueController {
                 issueService.rejectIssue(
                         issueId));
     }
+   
 }
