@@ -10,6 +10,9 @@ public class IssueDTO {
     private String assignedToEmail;
     private String assignedToRole;
     private String projectName;
+    
+    private String developerUserId;
+    private String testerUserId;
 
     private String status;
 	public String getTitle() {
@@ -65,6 +68,18 @@ public class IssueDTO {
 	}
 	public void setAssignedToName(String assignedToName) {
 		this.assignedToName = assignedToName;
+	}
+	public String getDeveloperUserId() {
+		return developerUserId;
+	}
+	public void setDeveloperUserId(String developerUserId) {
+		this.developerUserId = developerUserId;
+	}
+	public String getTesterUserId() {
+		return testerUserId;
+	}
+	public void setTesterUserId(String testerUserId) {
+		this.testerUserId = testerUserId;
 	}
     
     

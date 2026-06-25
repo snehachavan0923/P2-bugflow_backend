@@ -129,57 +129,134 @@ public class DashboardService {
 
         return dto;
     }
-    
-    public DeveloperDashboardResponse
-    getDeveloperDashboard(
+    public DeveloperDashboardResponse getDeveloperDashboard(
             String email) {
+
+        User developer =
+                userRepository.findByEmail(email)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "User not found"));
 
         DeveloperDashboardResponse dto =
                 new DeveloperDashboardResponse();
 
+        // Number of projects this developer belongs to
+        dto.setTotalProjects(
+                projectMemberRepository.countByEmail(
+                        developer.getEmail()));
+
+        // Total issues assigned to this developer
         dto.setAssignedTasks(
-                issueRepository
-                        .countByAssignedToEmail(
-                                email));
+                issueRepository.countByAssignedToEmail(
+                        developer.getEmail()));
 
+        // Assigned issues currently In Progress
         dto.setInProgress(
-                issueRepository
-                        .countByAssignedToEmailAndStatus(
-                                email,
-                                "In Progress"));
-
-        dto.setReview(
-                issueRepository
-                        .countByAssignedToEmailAndStatus(
-                                email,
-                                "Review"));
+                issueRepository.countByAssignedToEmailAndStatus(
+                        developer.getEmail(),
+                        "In Progress"));
 
         return dto;
     }
     
-    public TesterDashboardResponse
-    getTesterDashboard(
-            String email) {
+    public TesterDashboardResponse getTesterDashboard(String email){
 
         TesterDashboardResponse dto =
                 new TesterDashboardResponse();
 
-        dto.setCreatedIssues(
-                issueRepository
-                        .countByAssignedToRole(
-                                "Tester"));
+        dto.setAssignedIssues(
+                issueRepository.countByAssignedToEmail(email));
 
         dto.setPendingVerification(
-                issueRepository
-                        .countByAssignedToEmailAndStatus(
-                                email,
-                                "Review"));
+                issueRepository.countByAssignedToEmailAndStatus(
+                        email,
+                        "Review"));
 
         dto.setVerified(
+                issueRepository.countByAssignedToEmailAndStatus(
+                        email,
+                        "Done"));
+
+        return dto;
+    }
+    
+    public DashboardStatsResponse getViewerDashboard(
+            String email) {
+
+        User viewer =
+                userRepository.findByEmail(email)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "User not found"));
+
+        List<Project> projects =
+                projectRepository.findByOrganizationId(
+                        viewer.getOrganizationId());
+
+        List<String> projectIds =
+                projects.stream()
+                        .map(Project::getId)
+                        .toList();
+
+        DashboardStatsResponse dto =
+                new DashboardStatsResponse();
+
+        Organization organization =
+                organizationRepository
+                        .findById(
+                                viewer.getOrganizationId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Organization not found"));
+
+        dto.setOrganizationName(
+                organization.getName());
+
+        dto.setTotalProjects(
+                projects.size());
+
+        long totalMembers =
+                projects.stream()
+                        .flatMap(project ->
+                                projectMemberRepository
+                                        .findByProjectId(
+                                                project.getId())
+                                        .stream())
+                        .map(ProjectMember::getUserId)
+                        .distinct()
+                        .count();
+
+        dto.setTotalMembers(totalMembers);
+
+        dto.setTotalIssues(
+                issueRepository.countByProjectIdIn(
+                        projectIds));
+
+        dto.setAssignedTasks(
                 issueRepository
-                        .countByAssignedToEmailAndStatus(
-                                email,
-                                "Done"));
+                        .countByProjectIdInAndAssignedToUserIdIsNotNull(
+                                projectIds));
+
+        dto.setOpenIssues(
+                issueRepository.countByProjectIdInAndStatus(
+                        projectIds,
+                        "Open"));
+
+        dto.setInProgressIssues(
+                issueRepository.countByProjectIdInAndStatus(
+                        projectIds,
+                        "In Progress"));
+
+        dto.setReviewIssues(
+                issueRepository.countByProjectIdInAndStatus(
+                        projectIds,
+                        "Review"));
+
+        dto.setResolvedIssues(
+                issueRepository.countByProjectIdInAndStatus(
+                        projectIds,
+                        "Done"));
 
         return dto;
     }

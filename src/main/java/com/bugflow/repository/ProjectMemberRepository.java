@@ -13,6 +13,7 @@ public interface ProjectMemberRepository
     List<ProjectMember> findByProjectId(String projectId);
 
     List<ProjectMember> findByEmail(String email);
+    long countByEmail(String email);
     
     boolean existsByUserId(
             String userId);
@@ -27,10 +28,13 @@ public interface ProjectMemberRepository
             String projectId,
             String email);
 
-    void deleteByProjectIdAndUserId(
+    void deleteByProjectIdAndUserId( 
             String projectId,
             String userId);
     
     long countByOrganizationId(
             String organizationId);
+    List<ProjectMember> findByUserId(String userId);
+
+  
 }

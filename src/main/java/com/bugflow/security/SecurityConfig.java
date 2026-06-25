@@ -117,7 +117,7 @@ public class SecurityConfig {
 
             	    .requestMatchers(
             	            HttpMethod.GET,
-            	            "/projects/*/issues/project-review")
+            	            "/projects/*/issues/project-tester-board")
             	    .hasRole("Tester")
 
             	    // TESTER

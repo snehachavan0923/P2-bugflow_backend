@@ -35,12 +35,36 @@ public class IssueService {
             IssueDTO dto,
             String imageUrl) {
 
-        ProjectMember member =
-                projectMemberRepository.findById(
-                        dto.getAssignedToUserId())
-                .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Assigned member not found"));
+    	ProjectMember developer =
+    	        projectMemberRepository
+    	                .findByProjectIdAndUserId(
+    	                        projectId,
+    	                        dto.getDeveloperUserId())
+    	                .orElseThrow(() ->
+    	                        new ResourceNotFoundException(
+    	                                "Developer not found"));
+    	if(!developer.getRole().name()
+    	        .equals("Developer")) {
+
+    	    throw new BadRequestException(
+    	            "Selected member is not a developer");
+    	}
+    	
+
+    	ProjectMember tester =
+    	        projectMemberRepository
+    	                .findByProjectIdAndUserId(
+    	                        projectId,
+    	                        dto.getTesterUserId())
+    	                .orElseThrow(() ->
+    	                        new ResourceNotFoundException(
+    	                                "Tester not found"));
+    	if(!tester.getRole().name()
+    	        .equals("Tester")) {
+
+    	    throw new BadRequestException(
+    	            "Selected member is not a tester");
+    	}
 
         Issue issue = new Issue();
 
@@ -58,26 +82,35 @@ public class IssueService {
 
         issue.setPriority(dto.getPriority());
         
-        issue.setAssignedToName(
-                member.getName());
-
         issue.setAssignedToUserId(
-                member.getUserId());
+                developer.getUserId());
+
+        issue.setAssignedToName(
+                developer.getName());
 
         issue.setAssignedToEmail(
-                member.getEmail());
+                developer.getEmail());
 
         issue.setAssignedToRole(
-                member.getRole().name());
+                "Developer");
 
         issue.setDeveloperId(
-                member.getUserId());
+                developer.getUserId());
 
         issue.setDeveloperName(
-                member.getName());
+                developer.getName());
 
         issue.setDeveloperEmail(
-                member.getEmail());
+                developer.getEmail());
+
+        issue.setTesterId(
+                tester.getUserId());
+
+        issue.setTesterName(
+                tester.getName());
+
+        issue.setTesterEmail(
+                tester.getEmail());
 
         issue.setImageUrl(imageUrl);
 
@@ -150,18 +183,7 @@ public class IssueService {
                         new ResourceNotFoundException(
                                 "Issue not found"));
 
-        ProjectMember tester =
-                projectMemberRepository
-                        .findByProjectId(
-                                issue.getProjectId())
-                        .stream()
-                        .filter(m ->
-                                m.getRole().name()
-                                 .equals("Tester"))
-                        .findFirst()
-                        .orElseThrow(() ->
-                              new BadRequestException(
-                        	    "No tester assigned to project"));
+        
 
         issue.setResolutionImageUrl(
                 resolutionImageUrl);
@@ -169,13 +191,13 @@ public class IssueService {
         issue.setStatus("Review");
 
         issue.setAssignedToUserId(
-                tester.getUserId());
+                issue.getTesterId());
 
         issue.setAssignedToName(
-                tester.getName());
+                issue.getTesterName());
 
         issue.setAssignedToEmail(
-                tester.getEmail());
+                issue.getTesterEmail());
 
         issue.setAssignedToRole(
                 "Tester");
@@ -193,66 +215,104 @@ public class IssueService {
                         new ResourceNotFoundException(
                                 "Issue not found"));
 
-        issue.setTitle(
-                dto.getTitle());
+        issue.setTitle(dto.getTitle());
 
-        issue.setDescription(
-                dto.getDescription());
+        issue.setDescription(dto.getDescription());
 
-        issue.setPriority(
-                dto.getPriority());
+        issue.setPriority(dto.getPriority());
 
-        if(dto.getAssignedToUserId() != null &&
-           !dto.getAssignedToUserId().isBlank()) {
+        // Update Developer
+        if(dto.getDeveloperUserId() != null &&
+           !dto.getDeveloperUserId().isBlank()) {
 
-        	ProjectMember member =
-        	        projectMemberRepository
-        	            .findByProjectIdAndUserId(
-        	                    issue.getProjectId(),
-        	                    dto.getAssignedToUserId())
-        	            .orElseThrow(() ->
-        	                    new ResourceNotFoundException(
-        	                            "Assigned member not found"));
-            
- 
-            issue.setAssignedToUserId(
-                    member.getUserId());
-            issue.setAssignedToName(
-                    member.getName());
+            ProjectMember developer =
+                    projectMemberRepository
+                            .findByProjectIdAndUserId(
+                                    issue.getProjectId(),
+                                    dto.getDeveloperUserId())
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Developer not found"));
+            if(!developer.getRole().name()
+                    .equals("Developer")) {
 
-            issue.setAssignedToEmail(
-                    member.getEmail());
-
-            String role = member.getRole().name();
-
-            issue.setAssignedToRole(role);
-
-            if(role.equals("Developer")) {
-
-                issue.setDeveloperId(
-                        member.getUserId());
-
-                issue.setDeveloperName(
-                        member.getName());
-
-                issue.setDeveloperEmail(
-                        member.getEmail());
+                throw new BadRequestException(
+                        "Selected member is not a developer");
             }
-            
-            switch(role) {
 
-                case "Tester":
-                    issue.setStatus("Review");
-                    break;
+            issue.setDeveloperId(
+                    developer.getUserId());
 
-                case "Developer":
-                    issue.setStatus("Open");
-                    break;
+            issue.setDeveloperName(
+                    developer.getName());
 
-                default:
-                    break;
+            issue.setDeveloperEmail(
+                    developer.getEmail());
+
+            // If currently assigned to developer
+            // update current assignee also
+            if("Developer".equals(
+                    issue.getAssignedToRole())) {
+
+                issue.setAssignedToUserId(
+                        developer.getUserId());
+
+                issue.setAssignedToName(
+                        developer.getName());
+
+                issue.setAssignedToEmail(
+                        developer.getEmail());
+
+                issue.setAssignedToRole(
+                        "Developer");
             }
-            
+        }
+
+        // Update Tester
+        if(dto.getTesterUserId() != null &&
+           !dto.getTesterUserId().isBlank()) {
+
+            ProjectMember tester =
+                    projectMemberRepository
+                            .findByProjectIdAndUserId(
+                                    issue.getProjectId(),
+                                    dto.getTesterUserId())
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Tester not found"));
+            if(!tester.getRole().name()
+                    .equals("Tester")) {
+
+                throw new BadRequestException(
+                        "Selected member is not a tester");
+            }
+
+            issue.setTesterId(
+                    tester.getUserId());
+
+            issue.setTesterName(
+                    tester.getName());
+
+            issue.setTesterEmail(
+                    tester.getEmail());
+
+            // If currently assigned to tester
+            // update current assignee also
+            if("Tester".equals(
+                    issue.getAssignedToRole())) {
+
+                issue.setAssignedToUserId(
+                        tester.getUserId());
+
+                issue.setAssignedToName(
+                        tester.getName());
+
+                issue.setAssignedToEmail(
+                        tester.getEmail());
+
+                issue.setAssignedToRole(
+                        "Tester");
+            }
         }
 
         return issueRepository.save(issue);
@@ -284,25 +344,19 @@ public class IssueService {
                         "Review");
     }  */}
     
-    public List<Issue> getMyIssuesByProject(
+    public List<Issue> getDeveloperIssuesByProject(
             String projectId,
             String email) {
 
-        return issueRepository
-                .findByProjectIdAndAssignedToEmail(
-                        projectId,
-                        email);
+        return issueRepository.findByProjectId(
+                projectId);
     }
     
-    public List<Issue> getReviewIssuesByProject(
-            String projectId,
-            String email) {
+    public List<Issue> getTesterIssuesByProject(
+            String projectId) {
 
         return issueRepository
-                .findByProjectIdAndAssignedToEmailAndStatus(
-                        projectId,
-                        email,
-                        "Review");
+                .findByProjectId(projectId);
     }
     
     public List<Issue> getDeveloperTasks(
@@ -322,6 +376,18 @@ public class IssueService {
                                 "Issue not found"));
 
         issue.setStatus("Done");
+
+        issue.setAssignedToUserId(
+                issue.getTesterId());
+
+        issue.setAssignedToName(
+                issue.getTesterName());
+
+        issue.setAssignedToEmail(
+                issue.getTesterEmail());
+
+        issue.setAssignedToRole(
+                "Tester");
 
         return issueRepository.save(issue);
     }
@@ -386,4 +452,4 @@ public class IssueService {
     }
     
     
-}
+} 

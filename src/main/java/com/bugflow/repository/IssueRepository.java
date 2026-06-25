@@ -28,9 +28,17 @@ List<Issue> findByProjectIdAndAssignedToEmail(
     String email);
 
 List<Issue> findByProjectIdAndAssignedToEmailAndStatus(
-    String projectId,
+    String projectId, 
     String email,
     String status);
+
+List<Issue> findByProjectIdAndDeveloperEmail(
+        String projectId,
+        String developerEmail);
+
+List<Issue> findByProjectIdAndAssignedToRole(
+        String projectId,
+        String role); 
 
 long countByProjectIdInAndAssignedToUserIdIsNotNull(
         List<String> projectIds);

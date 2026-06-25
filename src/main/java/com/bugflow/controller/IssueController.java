@@ -117,36 +117,30 @@ public class IssueController {
                         email));
     } */}
     
-    @GetMapping("/project-my-tasks")
-    public ResponseEntity<List<Issue>>
-    getProjectTasks(
-            @PathVariable String projectId,
-            Authentication authentication) {
+  @GetMapping("/project-my-tasks")
+  public ResponseEntity<List<Issue>>
+  getProjectTasks(
+          @PathVariable String projectId,
+          Authentication authentication) {
 
-        String email =
-                authentication.getName();
+      String email =
+              authentication.getName();
 
-        return ResponseEntity.ok(
-                issueService.getMyIssuesByProject(
-                        projectId,
-                        email));
-    }
+      return ResponseEntity.ok(
+              issueService.getDeveloperIssuesByProject(
+                      projectId,
+                      email));
+  }
     
-    @GetMapping("/project-review")
-    public ResponseEntity<List<Issue>>
-    getProjectReviewIssues(
-            @PathVariable String projectId,
-            Authentication authentication) {
+  @GetMapping("/project-tester-board")
+  public ResponseEntity<List<Issue>>
+  getTesterBoard(
+          @PathVariable String projectId) {
 
-        String email =
-                authentication.getName();
-
-        return ResponseEntity.ok(
-                issueService.getReviewIssuesByProject(
-                        projectId,
-                        email));
-    }
-    
+      return ResponseEntity.ok(
+              issueService.getTesterIssuesByProject(
+                      projectId));
+  }
     
     @PutMapping("/{issueId}/approve")
     public ResponseEntity<Issue>

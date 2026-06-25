@@ -26,7 +26,9 @@ public class Issue {
     private String developerName;
     private String developerEmail;
     private String createdBy;
-
+    private String testerId;
+    private String testerName;
+    private String testerEmail;
     private String imageUrl; 
     private String resolutionImageUrl;
     
@@ -147,6 +149,25 @@ public class Issue {
 	public void setDeveloperEmail(String developerEmail) {
 		this.developerEmail = developerEmail;
 	}
+	public String getTesterId() {
+		return testerId;
+	}
+	public void setTesterId(String testerId) {
+		this.testerId = testerId;
+	}
+	public String getTesterName() {
+		return testerName;
+	}
+	public void setTesterName(String testerName) {
+		this.testerName = testerName;
+	}
+	public String getTesterEmail() {
+		return testerEmail;
+	}
+	public void setTesterEmail(String testerEmail) {
+		this.testerEmail = testerEmail;
+	}
+	
 	
 	
     

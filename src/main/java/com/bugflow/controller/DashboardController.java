@@ -61,4 +61,15 @@ public class DashboardController {
                 dashboardService.getTesterDashboard(
                         authentication.getName()));
     }
+    
+    @GetMapping("/viewer")
+    public ResponseEntity<DashboardStatsResponse>
+    getViewerDashboard(Authentication authentication){
+
+        return ResponseEntity.ok(
+            dashboardService.getViewerDashboard(
+                authentication.getName()
+            )
+        );
+    }
 }
