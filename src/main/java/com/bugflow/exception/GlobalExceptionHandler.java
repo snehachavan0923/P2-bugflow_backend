@@ -77,6 +77,24 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN
         );
     }
+    
+    @ExceptionHandler(OrganizationSuspendedException.class)
+    public ResponseEntity<ApiError> handleOrganizationSuspended(
+            OrganizationSuspendedException ex,
+            HttpServletRequest request) {
+
+        return new ResponseEntity<>(
+                new ApiError(
+                        HttpStatus.FORBIDDEN.value(),
+                        "Organization Suspended",
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                ),
+                HttpStatus.FORBIDDEN
+        );
+    }
+    
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(

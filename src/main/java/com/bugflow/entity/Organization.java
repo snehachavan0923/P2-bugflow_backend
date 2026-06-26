@@ -17,6 +17,8 @@ public class Organization {
 
     private LocalDateTime createdAt =
             LocalDateTime.now();
+    
+    private OrganizationStatus status = OrganizationStatus.ACTIVE;
 
     public String getId() {
         return id;
@@ -49,5 +51,13 @@ public class Organization {
     public void setCreatedAt(
             LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    
+    public OrganizationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrganizationStatus status) {
+        this.status = status;
     }
 }

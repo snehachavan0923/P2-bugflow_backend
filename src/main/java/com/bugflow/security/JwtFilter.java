@@ -1,5 +1,6 @@
 package com.bugflow.security;
-
+import com.bugflow.exception.OrganizationSuspendedException;
+import org.springframework.http.MediaType;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 
@@ -45,21 +46,42 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(email);
+            	try {
 
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                        		  email,  
-                                null,
-                                userDetails.getAuthorities()
-                        );
+            	    UserDetails userDetails =
+            	            userDetailsService.loadUserByUsername(email);
 
-                auth.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
+            	    UsernamePasswordAuthenticationToken auth =
+            	            new UsernamePasswordAuthenticationToken(
+            	                    email,
+            	                    null,
+            	                    userDetails.getAuthorities()
+            	            );
 
-                SecurityContextHolder.getContext().setAuthentication(auth);
+            	    auth.setDetails(
+            	            new WebAuthenticationDetailsSource().buildDetails(request)
+            	    );
+
+            	    SecurityContextHolder.getContext().setAuthentication(auth);
+
+            	}
+            	catch (OrganizationSuspendedException ex) {
+
+            	    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            	    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+            	    response.getWriter().write(
+            	            """
+            	            {
+            	                "status":403,
+            	                "error":"Organization Suspended",
+            	                "message":"Your organization has been suspended. Please contact BugFlow support."
+            	            }
+            	            """
+            	    );
+
+            	    return;
+            	}
             }
         }
 

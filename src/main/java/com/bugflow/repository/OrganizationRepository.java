@@ -1,5 +1,6 @@
 package com.bugflow.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -11,5 +12,7 @@ public interface OrganizationRepository
 
     Optional<Organization>
     findByOwnerId(String ownerId);
+    
+    List<Organization> findAllByOrderByCreatedAtDesc();
     
 }

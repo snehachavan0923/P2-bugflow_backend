@@ -140,6 +140,12 @@ public class SecurityConfig {
             	            "Developer",
             	            "Tester",
             	            "Viewer")
+            	    
+            	    // Admin
+            	    .requestMatchers(
+            	            "/admin/**")
+            	    .hasRole("Admin")
+
 
             	    // VIEW PROJECTS
             	    .requestMatchers(HttpMethod.GET,
