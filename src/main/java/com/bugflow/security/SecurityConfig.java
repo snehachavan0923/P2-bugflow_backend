@@ -64,6 +64,11 @@ public class SecurityConfig {
             	            HttpMethod.GET,
             	            "/organizations/settings")
             	    .hasRole("Owner")
+            	    
+            	    // Admin
+            	    .requestMatchers(
+            	            "/admin/**")
+            	    .hasRole("Admin")
 
             	    // OWNER
             	    .requestMatchers(HttpMethod.POST,
@@ -141,12 +146,7 @@ public class SecurityConfig {
             	            "Tester",
             	            "Viewer")
             	    
-            	    // Admin
-            	    .requestMatchers(
-            	            "/admin/**")
-            	    .hasRole("Admin")
-
-
+            	  
             	    // VIEW PROJECTS
             	    .requestMatchers(HttpMethod.GET,
             	            "/projects/**")

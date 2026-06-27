@@ -13,17 +13,17 @@ public interface ProjectMemberRepository
     List<ProjectMember> findByProjectId(String projectId);
 
     List<ProjectMember> findByEmail(String email);
-    long countByEmail(String email);
-    
-    boolean existsByUserId(
-            String userId);
-    
+    List<ProjectMember> findByUserId(String userId);
     
     Optional<ProjectMember>
     findByProjectIdAndUserId(
             String projectId,
             String userId);
-
+    long countByEmail(String email);
+    
+    boolean existsByUserId(
+            String userId);
+  
     boolean existsByProjectIdAndEmail(
             String projectId,
             String email);
@@ -34,7 +34,6 @@ public interface ProjectMemberRepository
     
     long countByOrganizationId(
             String organizationId);
-    List<ProjectMember> findByUserId(String userId);
-
+    long countByProjectId(String projectId);
   
 }
