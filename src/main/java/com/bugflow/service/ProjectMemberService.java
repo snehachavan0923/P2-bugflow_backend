@@ -177,4 +177,50 @@ public class ProjectMemberService {
             userRepository.save(user);
         }
     }
+    
+    public void changeMemberPassword(
+            String projectId,
+            String memberId,
+            String newPassword) {
+
+        ProjectMember member =
+                projectMemberRepository.findById(memberId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Member not found"));
+
+        if (!member.getProjectId().equals(projectId)) {
+            throw new UnauthorizedException(
+                    "Member does not belong to this project");
+        }
+
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new BadRequestException(
+                    "Password is required");
+        }
+
+        if (!newPassword.matches(
+                "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
+
+            throw new BadRequestException(
+                    "Password must be at least 8 characters and contain an uppercase letter, lowercase letter, number, and special character.");
+        }
+
+        User user =
+                userRepository.findById(member.getUserId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "User not found"));
+        
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BadRequestException(
+                    "Please enter a new password. The new password cannot be the same as the current password.");
+        }
+
+
+        user.setPassword(
+                passwordEncoder.encode(newPassword));
+
+        userRepository.save(user);
+    }
 }
