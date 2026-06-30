@@ -1,4 +1,5 @@
 package com.bugflow.controller;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import java.util.List;
 
@@ -91,9 +92,18 @@ public class IssueController {
 
  
     @DeleteMapping("/{issueId}")
-    public ResponseEntity<String> deleteIssue(@PathVariable String issueId) {
-        issueService.deleteIssue(issueId);
-        return ResponseEntity.ok("Deleted");
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<?> deleteIssue(
+            @PathVariable String projectId,
+            @PathVariable String issueId,
+            Authentication authentication) {
+
+        issueService.deleteIssue(
+                issueId,
+                authentication.getName());
+
+        return ResponseEntity.ok(
+                "Issue deleted successfully");
     }
     
   @GetMapping("/all")

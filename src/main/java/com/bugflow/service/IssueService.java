@@ -318,13 +318,34 @@ public class IssueService {
         return issueRepository.save(issue);
     }
 
-    public void deleteIssue(String id) {
+    public void deleteIssue(
+            String issueId,
+            String ownerEmail) {
+
+        User owner =
+                userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found"));
 
         Issue issue =
-                issueRepository.findById(id)
+                issueRepository.findById(issueId)
                 .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Issue not found"));
+                        new ResourceNotFoundException(
+                                "Issue not found"));
+
+        Project project =
+                projectRepository.findById(
+                        issue.getProjectId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Project not found"));
+
+        if (!project.getOwnerId().equals(owner.getId())) {
+
+            throw new BadRequestException(
+                    "You are not allowed to delete this issue.");
+        }
 
         issueRepository.delete(issue);
     }
