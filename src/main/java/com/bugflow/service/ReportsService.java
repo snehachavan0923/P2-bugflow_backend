@@ -91,45 +91,92 @@ public class ReportsService {
     }
 
     public List<TeamPerformanceReportDTO> getTeamPerformance(String projectId) {
+
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Project not found"));
 
         List<Issue> issues = issueRepository.findByProjectId(project.getId());
-        List<TeamPerformanceReportDTO> teamReport = new ArrayList<>();
+
+        Map<String, TeamPerformanceReportDTO> performanceMap = new HashMap<>();
 
         for (Issue issue : issues) {
-            String assigneeName = issue.getAssignedToName();
-            if (assigneeName == null || assigneeName.isBlank()) {
-                continue;
+
+            // =========================
+            // DEVELOPER
+            // =========================
+
+            if (issue.getDeveloperName() != null &&
+                    !issue.getDeveloperName().isBlank()) {
+
+                TeamPerformanceReportDTO developer =
+                        performanceMap.computeIfAbsent(
+                                issue.getDeveloperName(),
+                                name -> {
+                                    TeamPerformanceReportDTO dto =
+                                            new TeamPerformanceReportDTO();
+                                    dto.setName(name);
+                                    return dto;
+                                });
+
+                // Every issue assigned to this developer
+                developer.setAssigned(
+                        developer.getAssigned() + 1);
+
+                // Development completed
+                if ("Review".equalsIgnoreCase(issue.getStatus())
+                        || "Done".equalsIgnoreCase(issue.getStatus())) {
+
+                    developer.setCompleted(
+                            developer.getCompleted() + 1);
+                }
             }
 
-            TeamPerformanceReportDTO report = teamReport.stream()
-                    .filter(item -> assigneeName.equals(item.getName()))
-                    .findFirst()
-                    .orElseGet(() -> {
-                        TeamPerformanceReportDTO newItem = new TeamPerformanceReportDTO();
-                        newItem.setName(assigneeName);
-                        teamReport.add(newItem);
-                        return newItem;
-                    });
+            // =========================
+            // TESTER
+            // =========================
 
-            report.setAssigned(report.getAssigned() + 1);
-            if ("Done".equalsIgnoreCase(issue.getStatus())) {
-                report.setCompleted(report.getCompleted() + 1);
+            if (issue.getTesterName() != null &&
+                    !issue.getTesterName().isBlank()) {
+
+                TeamPerformanceReportDTO tester =
+                        performanceMap.computeIfAbsent(
+                                issue.getTesterName(),
+                                name -> {
+                                    TeamPerformanceReportDTO dto =
+                                            new TeamPerformanceReportDTO();
+                                    dto.setName(name);
+                                    return dto;
+                                });
+
+                // Every issue assigned to this tester
+                tester.setAssigned(
+                        tester.getAssigned() + 1);
+
+                // Testing completed
+                if ("Done".equalsIgnoreCase(issue.getStatus())) {
+
+                    tester.setCompleted(
+                            tester.getCompleted() + 1);
+                }
             }
         }
 
-        for (TeamPerformanceReportDTO report : teamReport) {
-            report.setPending(report.getAssigned() - report.getCompleted());
-            if (report.getAssigned() == 0) {
-                report.setCompletionRate(0);
-            } else {
-                report.setCompletionRate((int) Math.round(
-                        ((double) report.getCompleted() / (double) report.getAssigned()) * 100));
-            }
+        for (TeamPerformanceReportDTO report : performanceMap.values()) {
+
+            report.setPending(
+                    report.getAssigned() - report.getCompleted());
+
+            report.setCompletionRate(
+                    report.getAssigned() == 0
+                            ? 0
+                            : (int)Math.round(
+                                    (double) report.getCompleted()
+                                    / report.getAssigned()
+                                    * 100));
         }
 
-        return teamReport;
+        return new ArrayList<>(performanceMap.values());
     }
 
     public ProjectTrendsReportDTO getProjectTrends(String projectId) {
@@ -242,14 +289,38 @@ public class ReportsService {
                 .count();
 
         // Calculate developer activity (most and least active)
+        // Calculate developer activity (completed development work)
         Map<String, Integer> developerActivity = new HashMap<>();
+
+        // Add every developer with 0 completed tasks
         for (Issue issue : issues) {
-            if (issue.getAssignedToName() != null && !issue.getAssignedToName().isBlank()) {
-                developerActivity.put(issue.getAssignedToName(),
-                        developerActivity.getOrDefault(issue.getAssignedToName(), 0) + 1);
+
+            if (issue.getDeveloperName() != null
+                    && !issue.getDeveloperName().isBlank()) {
+
+                developerActivity.putIfAbsent(
+                        issue.getDeveloperName(),
+                        0);
             }
         }
 
+        // Count completed development work
+        for (Issue issue : issues) {
+
+            if (issue.getDeveloperName() == null
+                    || issue.getDeveloperName().isBlank()) {
+                continue;
+            }
+
+            // Developer work is complete once issue reaches Review or Done
+            if ("Review".equalsIgnoreCase(issue.getStatus())
+                    || "Done".equalsIgnoreCase(issue.getStatus())) {
+
+                developerActivity.put(
+                        issue.getDeveloperName(),
+                        developerActivity.get(issue.getDeveloperName()) + 1);
+            }
+        }
         String mostActiveDeveloper = "N/A";
         String leastActiveDeveloper = "N/A";
         if (!developerActivity.isEmpty()) {
