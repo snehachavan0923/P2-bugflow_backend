@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import com.bugflow.dto.PlanOptionDTO;
 import com.bugflow.dto.SubscriptionResponseDTO;
+import com.bugflow.dto.UpgradeSubscriptionRequestDTO;
 import com.bugflow.entity.Organization;
+import com.bugflow.entity.Project;
 import com.bugflow.entity.Subscription;
 import com.bugflow.entity.SubscriptionPlan;
 import com.bugflow.entity.SubscriptionStatus;
@@ -72,9 +74,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    public SubscriptionResponseDTO upgradeSubscription(String email, SubscriptionPlan plan) {
-        if (plan == null) {
+    public SubscriptionResponseDTO upgradeSubscription(String email, UpgradeSubscriptionRequestDTO request) {
+        if (request == null || request.getPlan() == null || request.getPlan().isBlank()) {
             throw new BadRequestException("Plan is required");
+        }
+
+        SubscriptionPlan plan;
+        try {
+            plan = SubscriptionPlan.valueOf(request.getPlan().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid plan selected");
+        }
+
+        if (plan == SubscriptionPlan.ENTERPRISE) {
+            throw new BadRequestException("Enterprise plans must be handled through sales contact");
         }
 
         User user = findUser(email);
@@ -89,7 +102,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new BadRequestException("Only organization owner can manage subscriptions");
         }
 
-        return applyPlanToSubscription(findSubscriptionForUser(user), plan);
+        Subscription subscription = findSubscriptionForUser(user);
+        validatePlanChange(subscription, plan);
+        return applyPlanToSubscription(subscription, plan);
     }
 
     @Override
@@ -120,20 +135,17 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     public SubscriptionResponseDTO getSubscriptionUsage(String email) {
         User user = findUser(email);
-        Subscription subscription = findSubscriptionForUser(user);
+        Subscription subscription = findSubscriptionReadOnly(user);
 
         long projectCount = projectRepository.countByOrganizationId(user.getOrganizationId());
         long memberCount = projectMemberRepository.countByOrganizationId(user.getOrganizationId());
-        long issueCount = issueRepository.countByProjectIdIn(projectRepository.findByOrganizationId(user.getOrganizationId()).stream()
-                .map(project -> project.getId())
-                .toList());
+        long issueCount = countIssuesForOrganization(user.getOrganizationId());
 
-        subscription.setCurrentProjects((int) projectCount);
-        subscription.setCurrentMembers((int) memberCount);
-        subscription.setCurrentIssues((int) issueCount);
-        subscription.setUpdatedAt(LocalDateTime.now());
-        Subscription saved = subscriptionRepository.save(subscription);
-        return mapToDto(saved);
+        SubscriptionResponseDTO dto = mapToDto(subscription);
+        dto.setCurrentProjects((int) projectCount);
+        dto.setCurrentMembers((int) memberCount);
+        dto.setCurrentIssues((int) issueCount);
+        return dto;
     }
 
     @Override
@@ -175,6 +187,75 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.setCreatedAt(LocalDateTime.now());
         subscription.setUpdatedAt(LocalDateTime.now());
         return subscriptionRepository.save(subscription);
+    }
+
+    private Subscription findSubscriptionReadOnly(User user) {
+        if (user.getOrganizationId() == null) {
+            throw new BadRequestException("Organization is required for subscription");
+        }
+
+        return subscriptionRepository.findByOrganizationId(user.getOrganizationId())
+                .orElseGet(() -> buildDefaultSubscription(user));
+    }
+
+    private Subscription buildDefaultSubscription(User user) {
+        Subscription subscription = new Subscription();
+        subscription.setOrganizationId(user.getOrganizationId());
+        subscription.setOwnerId(user.getId());
+        subscription.setPlan(SubscriptionPlan.FREE);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setProjectLimit(resolveProjectLimit(SubscriptionPlan.FREE));
+        subscription.setMemberLimit(resolveMemberLimit(SubscriptionPlan.FREE));
+        subscription.setIssueLimit(resolveIssueLimit(SubscriptionPlan.FREE));
+        subscription.setCurrentProjects(0);
+        subscription.setCurrentMembers(0);
+        subscription.setCurrentIssues(0);
+        subscription.setStartDate(LocalDateTime.now());
+        subscription.setCreatedAt(LocalDateTime.now());
+        subscription.setUpdatedAt(LocalDateTime.now());
+        return subscription;
+    }
+
+    private void validatePlanChange(Subscription subscription, SubscriptionPlan targetPlan) {
+        if (subscription.getPlan() == null) {
+            return;
+        }
+
+        if (targetPlan == null || subscription.getPlan() == targetPlan) {
+            return;
+        }
+
+        boolean isDowngrade = targetPlan.ordinal() < subscription.getPlan().ordinal();
+        if (!isDowngrade) {
+            return;
+        }
+
+        long currentProjects = projectRepository.countByOrganizationId(subscription.getOrganizationId());
+        long currentMembers = projectMemberRepository.countByOrganizationId(subscription.getOrganizationId());
+        long currentIssues = countIssuesForOrganization(subscription.getOrganizationId());
+
+        if (targetPlan.getProjectLimit() != null && currentProjects > targetPlan.getProjectLimit()) {
+            throw new BadRequestException("Cannot downgrade. Current organization exceeds " + targetPlan.getDisplayName() + " plan limits.");
+        }
+
+        if (targetPlan.getMemberLimit() != null && currentMembers > targetPlan.getMemberLimit()) {
+            throw new BadRequestException("Cannot downgrade. Current organization exceeds " + targetPlan.getDisplayName() + " plan limits.");
+        }
+
+        if (targetPlan.getIssueLimit() != null && currentIssues > targetPlan.getIssueLimit()) {
+            throw new BadRequestException("Cannot downgrade. Current organization exceeds " + targetPlan.getDisplayName() + " plan limits.");
+        }
+    }
+
+    private long countIssuesForOrganization(String organizationId) {
+        List<Project> projects = projectRepository.findByOrganizationId(organizationId);
+        if (projects == null || projects.isEmpty()) {
+            return 0;
+        }
+
+        return issueRepository.countByProjectIdIn(projects.stream()
+                .map(Project::getId)
+                .toList());
     }
 
     private SubscriptionResponseDTO applyPlanToSubscription(Subscription subscription, SubscriptionPlan plan) {

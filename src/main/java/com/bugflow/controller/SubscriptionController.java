@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bugflow.dto.PlanOptionDTO;
 import com.bugflow.dto.SubscriptionResponseDTO;
+import com.bugflow.dto.UpgradeSubscriptionRequestDTO;
 import com.bugflow.entity.SubscriptionPlan;
 import com.bugflow.service.SubscriptionService;
 
@@ -49,8 +50,8 @@ public class SubscriptionController {
     @PreAuthorize("hasRole('Owner')")
     public ResponseEntity<SubscriptionResponseDTO> upgradeSubscription(
             Authentication authentication,
-            @RequestBody SubscriptionPlan plan) {
-        return ResponseEntity.ok(subscriptionService.upgradeSubscription(authentication.getName(), plan));
+            @RequestBody UpgradeSubscriptionRequestDTO request) {
+        return ResponseEntity.ok(subscriptionService.upgradeSubscription(authentication.getName(), request));
     }
 
     @PutMapping("/expire")
