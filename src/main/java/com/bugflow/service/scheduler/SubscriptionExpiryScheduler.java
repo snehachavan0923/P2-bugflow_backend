@@ -1,4 +1,4 @@
-package com.bugflow.service;
+package com.bugflow.service.scheduler;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,20 +18,18 @@ public class SubscriptionExpiryScheduler {
     public SubscriptionExpiryScheduler(SubscriptionRepository subscriptionRepository) {
         this.subscriptionRepository = subscriptionRepository;
     }
-
+    
+    // Runs every day at 12:00 AM (midnight) to automatically expire subscriptions
     @Scheduled(cron = "0 0 0 * * ?")
     public void expireSubscriptions() {
-        List<Subscription> subscriptions = subscriptionRepository.findAll();
         LocalDateTime now = LocalDateTime.now();
+        List<Subscription> subscriptions = subscriptionRepository
+                .findByStatusAndEndDateLessThanEqual(SubscriptionStatus.ACTIVE, now);
 
         for (Subscription subscription : subscriptions) {
-            if (subscription.getStatus() == SubscriptionStatus.ACTIVE
-                    && subscription.getEndDate() != null
-                    && !subscription.getEndDate().isAfter(now)) {
-                subscription.setStatus(SubscriptionStatus.EXPIRED);
-                subscription.setUpdatedAt(now);
-                subscriptionRepository.save(subscription);
-            }
+            subscription.setStatus(SubscriptionStatus.EXPIRED);
+            subscription.setUpdatedAt(now);
+            subscriptionRepository.save(subscription);
         }
     }
 }

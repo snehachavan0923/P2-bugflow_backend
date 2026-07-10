@@ -92,7 +92,7 @@ public class IssueController {
 
  
     @DeleteMapping("/{issueId}")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('Owner')")
     public ResponseEntity<?> deleteIssue(
             @PathVariable String projectId,
             @PathVariable String issueId,

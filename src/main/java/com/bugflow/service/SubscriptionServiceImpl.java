@@ -259,20 +259,26 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     private SubscriptionResponseDTO applyPlanToSubscription(Subscription subscription, SubscriptionPlan plan) {
+        LocalDateTime now = LocalDateTime.now();
+
         subscription.setPlan(plan);
         subscription.setStatus(SubscriptionStatus.ACTIVE);
         subscription.setProjectLimit(resolveProjectLimit(plan));
         subscription.setMemberLimit(resolveMemberLimit(plan));
         subscription.setIssueLimit(resolveIssueLimit(plan));
-        subscription.setUpdatedAt(LocalDateTime.now());
-
-        if (subscription.getStartDate() == null) {
-            subscription.setStartDate(LocalDateTime.now());
-        }
-        subscription.setEndDate(null);
+        subscription.setStartDate(now);
+        subscription.setEndDate(resolveEndDate(plan, now));
+        subscription.setUpdatedAt(now);
 
         Subscription saved = subscriptionRepository.save(subscription);
         return mapToDto(saved);
+    }
+
+    private LocalDateTime resolveEndDate(SubscriptionPlan plan, LocalDateTime startDate) {
+        return switch (plan) {
+            case STARTER, BUSINESS -> startDate.plusMonths(1);
+            case FREE, ENTERPRISE -> null;
+        };
     }
 
     private Subscription createDefaultSubscription(Organization organization) {
