@@ -24,18 +24,21 @@ public class ProjectMemberService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+        private final com.bugflow.service.SubscriptionValidator subscriptionValidator;
 
-    public ProjectMemberService(
-            ProjectMemberRepository projectMemberRepository,
-            ProjectRepository projectRepository,
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+        public ProjectMemberService(
+                        ProjectMemberRepository projectMemberRepository,
+                        ProjectRepository projectRepository,
+                        UserRepository userRepository,
+                        PasswordEncoder passwordEncoder,
+                        com.bugflow.service.SubscriptionValidator subscriptionValidator) {
 
-        this.projectMemberRepository = projectMemberRepository; 
-        this.projectRepository = projectRepository;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+                this.projectMemberRepository = projectMemberRepository; 
+                this.projectRepository = projectRepository;
+                this.userRepository = userRepository;
+                this.passwordEncoder = passwordEncoder;
+                this.subscriptionValidator = subscriptionValidator;
+        }
 
     public ProjectMember addMember(
             String projectId,
@@ -59,6 +62,9 @@ public class ProjectMemberService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Project not found"));
+
+        // Validate member limit for the organization before creating a member
+        subscriptionValidator.checkMemberLimit(project.getOrganizationId());
 
         if(user != null) {
 

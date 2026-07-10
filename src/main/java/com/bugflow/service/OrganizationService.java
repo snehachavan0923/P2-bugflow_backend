@@ -11,8 +11,12 @@ import com.bugflow.entity.Organization;
 import com.bugflow.entity.User;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
+import com.bugflow.entity.Subscription;
+import com.bugflow.entity.SubscriptionPlan;
+import com.bugflow.entity.SubscriptionStatus;
 import com.bugflow.repository.OrganizationRepository;
 import com.bugflow.repository.ProjectRepository;
+import com.bugflow.repository.SubscriptionRepository;
 import com.bugflow.repository.UserRepository;
 
 @Service
@@ -23,11 +27,13 @@ public class OrganizationService {
     private final UserRepository userRepository;
     private final ProjectRepository
     projectRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     public OrganizationService(
             OrganizationRepository organizationRepository,
             UserRepository userRepository,
-            ProjectRepository projectRepository) {
+            ProjectRepository projectRepository,
+            SubscriptionRepository subscriptionRepository) {
 
         this.organizationRepository =
                 organizationRepository;
@@ -37,6 +43,9 @@ public class OrganizationService {
 
         this.projectRepository =
                 projectRepository;
+
+        this.subscriptionRepository =
+                subscriptionRepository;
     }
 
     public Organization createOrganization(
@@ -71,6 +80,19 @@ public class OrganizationService {
                 org.getId());
 
         userRepository.save(owner);
+
+        Subscription subscription = new Subscription();
+        subscription.setOrganizationId(org.getId());
+        subscription.setOwnerId(owner.getId());
+        subscription.setPlan(SubscriptionPlan.FREE);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setProjectLimit(SubscriptionPlan.FREE.getProjectLimit());
+        subscription.setMemberLimit(SubscriptionPlan.FREE.getMemberLimit());
+        subscription.setIssueLimit(SubscriptionPlan.FREE.getIssueLimit());
+        subscription.setCurrentProjects(0);
+        subscription.setCurrentMembers(0);
+        subscription.setCurrentIssues(0);
+        subscriptionRepository.save(subscription);
 
         return org;
     }

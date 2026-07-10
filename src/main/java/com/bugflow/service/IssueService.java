@@ -29,6 +29,8 @@ public class IssueService {
 
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
+        @Autowired
+        private com.bugflow.service.SubscriptionValidator subscriptionValidator;
 
     public Issue createIssue(
             String projectId,
@@ -116,7 +118,10 @@ public class IssueService {
 
         issue.setStatus("Open");
 
-        return issueRepository.save(issue);
+                // Validate issue limit for the organization's subscription
+                subscriptionValidator.checkIssueLimit(project.getOrganizationId());
+
+                return issueRepository.save(issue);
     }
 
     public List<Issue> getIssuesByProject(

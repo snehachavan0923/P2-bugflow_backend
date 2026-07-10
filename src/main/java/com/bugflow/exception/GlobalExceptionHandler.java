@@ -94,6 +94,40 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN
         );
     }
+
+    @ExceptionHandler(com.bugflow.exception.SubscriptionLimitExceededException.class)
+    public ResponseEntity<ApiError> handleSubscriptionLimitExceeded(
+            com.bugflow.exception.SubscriptionLimitExceededException ex,
+            HttpServletRequest request) {
+
+        return new ResponseEntity<>(
+                new ApiError(
+                        HttpStatus.FORBIDDEN.value(),
+                        "Forbidden",
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                ),
+                HttpStatus.FORBIDDEN
+        );
+    }
+
+    @ExceptionHandler(com.bugflow.exception.SubscriptionExpiredException.class)
+    public ResponseEntity<ApiError> handleSubscriptionExpired(
+            com.bugflow.exception.SubscriptionExpiredException ex,
+            HttpServletRequest request) {
+
+        return new ResponseEntity<>(
+                new ApiError(
+                        HttpStatus.FORBIDDEN.value(),
+                        "Subscription Expired",
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                ),
+                HttpStatus.FORBIDDEN
+        );
+    }
     
 
     @ExceptionHandler(Exception.class)

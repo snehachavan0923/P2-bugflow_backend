@@ -22,6 +22,9 @@ public class ProjectService {
     @Autowired 
     private ProjectRepository projectRepository;
 
+        @Autowired
+        private com.bugflow.service.SubscriptionValidator subscriptionValidator;
+
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
@@ -59,6 +62,9 @@ public class ProjectService {
 
         project.setOrganizationId(
                 owner.getOrganizationId());
+
+        // Subscription validation: block creation if project limit reached
+        subscriptionValidator.checkProjectLimit(owner.getOrganizationId());
 
         return projectRepository.save(project);
     }
