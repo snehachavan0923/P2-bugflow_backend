@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.bugflow.dto.PlanOptionDTO;
 import com.bugflow.dto.SubscriptionResponseDTO;
+import com.bugflow.dto.UpgradeSubscriptionRequestDTO;
 import com.bugflow.entity.SubscriptionPlan;
 
 public interface SubscriptionService {
@@ -12,7 +13,7 @@ public interface SubscriptionService {
 
     List<PlanOptionDTO> getAvailablePlans();
 
-    SubscriptionResponseDTO upgradeSubscription(String email, SubscriptionPlan plan);
+    SubscriptionResponseDTO upgradeSubscription(String email, UpgradeSubscriptionRequestDTO request);
 
     SubscriptionResponseDTO upgradeSubscriptionByOrganizationId(String organizationId, SubscriptionPlan plan);
 
