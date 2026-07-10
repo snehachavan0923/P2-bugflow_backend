@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.bugflow.entity.Subscription;
 import com.bugflow.entity.SubscriptionStatus;
 import com.bugflow.repository.SubscriptionRepository;
+import com.bugflow.service.scheduler.SubscriptionExpiryScheduler;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionExpirySchedulerTest {
