@@ -64,6 +64,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             PlanOptionDTO dto = new PlanOptionDTO();
             dto.setName(plan.name());
             dto.setDisplayName(plan.getDisplayName());
+            dto.setPrice(plan.getPrice());
+            dto.setDurationDays(plan.getDurationDays());
             dto.setProjectLimit(plan.getProjectLimit());
             dto.setMemberLimit(plan.getMemberLimit());
             dto.setIssueLimit(plan.getIssueLimit());
@@ -86,6 +88,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new BadRequestException("Invalid plan selected");
         }
 
+        return activateSubscription(email, plan);
+    }
+
+    @Override
+    public SubscriptionResponseDTO validateSubscriptionUpgrade(String email, SubscriptionPlan plan) {
+        if (plan == null) {
+            throw new BadRequestException("Plan is required");
+        }
+
         if (plan == SubscriptionPlan.ENTERPRISE) {
             throw new BadRequestException("Enterprise plans must be handled through sales contact");
         }
@@ -104,6 +115,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Subscription subscription = findSubscriptionForUser(user);
         validatePlanChange(subscription, plan);
+        return mapToDto(subscription);
+    }
+
+    @Override
+    public SubscriptionResponseDTO activateSubscription(String email, SubscriptionPlan plan) {
+        validateSubscriptionUpgrade(email, plan);
+        User user = findUser(email);
+        Subscription subscription = findSubscriptionForUser(user);
         return applyPlanToSubscription(subscription, plan);
     }
 
@@ -275,10 +294,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     private LocalDateTime resolveEndDate(SubscriptionPlan plan, LocalDateTime startDate) {
-        return switch (plan) {
-            case STARTER, BUSINESS -> startDate.plusMonths(1);
-            case FREE, ENTERPRISE -> null;
-        };
+        return plan.getDurationDays() == null ? null : startDate.plusDays(plan.getDurationDays());
     }
 
     private Subscription createDefaultSubscription(Organization organization) {

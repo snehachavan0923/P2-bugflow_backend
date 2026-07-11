@@ -15,6 +15,10 @@ public interface SubscriptionService {
 
     SubscriptionResponseDTO upgradeSubscription(String email, UpgradeSubscriptionRequestDTO request);
 
+    SubscriptionResponseDTO validateSubscriptionUpgrade(String email, SubscriptionPlan plan);
+
+    SubscriptionResponseDTO activateSubscription(String email, SubscriptionPlan plan);
+
     SubscriptionResponseDTO upgradeSubscriptionByOrganizationId(String organizationId, SubscriptionPlan plan);
 
     SubscriptionResponseDTO expireSubscription(String email);

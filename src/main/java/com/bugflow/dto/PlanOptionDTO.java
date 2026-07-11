@@ -1,9 +1,13 @@
 package com.bugflow.dto;
 
+import java.math.BigDecimal;
+
 public class PlanOptionDTO {
 
     private String name;
     private String displayName;
+    private BigDecimal price;
+    private Integer durationDays;
     private Integer projectLimit;
     private Integer memberLimit;
     private Integer issueLimit;
@@ -23,6 +27,22 @@ public class PlanOptionDTO {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public Integer getDurationDays() {
+        return durationDays;
+    }
+
+    public void setDurationDays(Integer durationDays) {
+        this.durationDays = durationDays;
     }
 
     public Integer getProjectLimit() {
