@@ -12,11 +12,11 @@
 		<relativePath />
 	</parent>
 
-	<groupId>com</groupId>
-	<artifactId>pglinker</artifactId>
+	<groupId>com.bugflow</groupId>
+	<artifactId>bugflow-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>pglinker</name>
-	<description>PGLinker Backend</description>
+	<name>bugflow-backend</name>
+	<description>BugFlow Backend</description>
 
 	<properties>
 		<java.version>21</java.version>
