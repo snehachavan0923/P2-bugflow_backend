@@ -47,7 +47,6 @@ public class SubscriptionController {
     }
 
     @GetMapping("/plans")
-    @PreAuthorize("hasRole('Owner')")
     public ResponseEntity<List<PlanOptionDTO>> getAvailablePlans(Authentication authentication) {
         return ResponseEntity.ok(subscriptionService.getAvailablePlans());
     }

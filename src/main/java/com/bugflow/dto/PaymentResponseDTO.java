@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 
 import com.bugflow.entity.PaymentMethod;
 import com.bugflow.entity.PaymentStatus;
-import com.bugflow.entity.SubscriptionPlan;
 
 public class PaymentResponseDTO {
 
@@ -13,7 +12,7 @@ public class PaymentResponseDTO {
     private String organizationId;
     private String ownerId;
     private String subscriptionId;
-    private SubscriptionPlan plan;
+    private String plan;
     private BigDecimal amount;
     private String currency;
     private PaymentStatus paymentStatus;
@@ -31,8 +30,8 @@ public class PaymentResponseDTO {
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
     public String getSubscriptionId() { return subscriptionId; }
     public void setSubscriptionId(String subscriptionId) { this.subscriptionId = subscriptionId; }
-    public SubscriptionPlan getPlan() { return plan; }
-    public void setPlan(SubscriptionPlan plan) { this.plan = plan; }
+    public String getPlan() { return plan; }
+    public void setPlan(String plan) { this.plan = plan; }
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public String getCurrency() { return currency; }

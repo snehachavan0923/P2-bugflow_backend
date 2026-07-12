@@ -14,7 +14,8 @@ public class Subscription {
     private String organizationId;
     private String ownerId;
 
-    private SubscriptionPlan plan = SubscriptionPlan.FREE;
+    // Stored as a name so plans managed in MongoDB are not limited to enum values.
+    private String plan = SubscriptionPlan.FREE.name();
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
 
     private Integer projectLimit = SubscriptionPlan.FREE.getProjectLimit();
@@ -55,12 +56,16 @@ public class Subscription {
         this.ownerId = ownerId;
     }
 
-    public SubscriptionPlan getPlan() {
+    public String getPlan() {
         return plan;
     }
 
-    public void setPlan(SubscriptionPlan plan) {
+    public void setPlan(String plan) {
         this.plan = plan;
+    }
+
+    public void setPlan(SubscriptionPlan plan) {
+        this.plan = plan == null ? null : plan.name();
     }
 
     public SubscriptionStatus getStatus() {

@@ -1,7 +1,6 @@
 package com.bugflow.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,6 +10,7 @@ import com.bugflow.dto.PlanOptionDTO;
 import com.bugflow.dto.SubscriptionResponseDTO;
 import com.bugflow.dto.UpgradeSubscriptionRequestDTO;
 import com.bugflow.entity.Organization;
+import com.bugflow.entity.Plan;
 import com.bugflow.entity.Project;
 import com.bugflow.entity.Subscription;
 import com.bugflow.entity.SubscriptionPlan;
@@ -20,6 +20,7 @@ import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.repository.IssueRepository;
 import com.bugflow.repository.OrganizationRepository;
+import com.bugflow.repository.PlanRepository;
 import com.bugflow.repository.ProjectMemberRepository;
 import com.bugflow.repository.ProjectRepository;
 import com.bugflow.repository.SubscriptionRepository;
@@ -34,70 +35,73 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final IssueRepository issueRepository;
+    private final PlanRepository planRepository;
 
-    public SubscriptionServiceImpl(
-            SubscriptionRepository subscriptionRepository,
-            OrganizationRepository organizationRepository,
-            UserRepository userRepository,
-            ProjectRepository projectRepository,
-            ProjectMemberRepository projectMemberRepository,
-            IssueRepository issueRepository) {
+    public SubscriptionServiceImpl(SubscriptionRepository subscriptionRepository,
+            OrganizationRepository organizationRepository, UserRepository userRepository,
+            ProjectRepository projectRepository, ProjectMemberRepository projectMemberRepository,
+            IssueRepository issueRepository, PlanRepository planRepository) {
         this.subscriptionRepository = subscriptionRepository;
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.issueRepository = issueRepository;
+        this.planRepository = planRepository;
     }
 
     @Override
     public SubscriptionResponseDTO getCurrentSubscription(String email) {
-        User user = findUser(email);
-        Subscription subscription = findSubscriptionForUser(user);
-        return mapToDto(subscription);
+        Subscription subscription = findSubscriptionForUser(findUser(email));
+        return mapToDto(subscription, findPlan(subscription.getPlan(), false));
     }
 
     @Override
     public List<PlanOptionDTO> getAvailablePlans() {
-        List<PlanOptionDTO> plans = new ArrayList<>();
-        for (SubscriptionPlan plan : SubscriptionPlan.values()) {
+        return planRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream().map(plan -> {
             PlanOptionDTO dto = new PlanOptionDTO();
-            dto.setName(plan.name());
+            dto.setName(plan.getName());
             dto.setDisplayName(plan.getDisplayName());
+
             dto.setPrice(plan.getPrice());
+            dto.setCurrency(plan.getCurrency());
+
+            dto.setBillingPeriod(plan.getBillingPeriod());
+            dto.setDescription(plan.getDescription());
+
             dto.setDurationDays(plan.getDurationDays());
+
             dto.setProjectLimit(plan.getProjectLimit());
             dto.setMemberLimit(plan.getMemberLimit());
             dto.setIssueLimit(plan.getIssueLimit());
-            dto.setUnlimited(plan.getIssueLimit() == null && plan != SubscriptionPlan.FREE);
-            plans.add(dto);
-        }
-        return plans;
+
+            dto.setHighlight(plan.isHighlight());
+            dto.setAccentColor(plan.getAccentColor());
+
+            dto.setFeatures(plan.getFeatures());
+
+            dto.setUnlimited(
+                    plan.getProjectLimit() == null
+                    && plan.getMemberLimit() == null
+                    && plan.getIssueLimit() == null);
+            return dto;
+        }).toList();
     }
 
     @Override
     public SubscriptionResponseDTO upgradeSubscription(String email, UpgradeSubscriptionRequestDTO request) {
-        if (request == null || request.getPlan() == null || request.getPlan().isBlank()) {
-            throw new BadRequestException("Plan is required");
-        }
-
-        SubscriptionPlan plan;
-        try {
-            plan = SubscriptionPlan.valueOf(request.getPlan().trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new BadRequestException("Invalid plan selected");
-        }
-
-        return activateSubscription(email, plan);
+        return activateSubscription(email, request == null ? null : request.getPlan());
     }
 
     @Override
     public SubscriptionResponseDTO validateSubscriptionUpgrade(String email, SubscriptionPlan plan) {
-        if (plan == null) {
-            throw new BadRequestException("Plan is required");
-        }
+        return validateSubscriptionUpgrade(email, plan == null ? null : plan.name());
+    }
 
-        if (plan == SubscriptionPlan.ENTERPRISE) {
+    @Override
+    public SubscriptionResponseDTO validateSubscriptionUpgrade(String email, String planName) {
+        Plan plan = findPlan(planName, true);
+        if ("ENTERPRISE".equalsIgnoreCase(plan.getName())) {
             throw new BadRequestException("Enterprise plans must be handled through sales contact");
         }
 
@@ -105,74 +109,65 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (user.getOrganizationId() == null) {
             throw new BadRequestException("Organization is required for subscription");
         }
-
         Organization organization = organizationRepository.findById(user.getOrganizationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
-
-        if (!organization.getOwnerId().equals(user.getId())) {
+        if (!user.getId().equals(organization.getOwnerId())) {
             throw new BadRequestException("Only organization owner can manage subscriptions");
         }
 
         Subscription subscription = findSubscriptionForUser(user);
         validatePlanChange(subscription, plan);
-        return mapToDto(subscription);
+        return mapToDto(subscription, findPlan(subscription.getPlan(), false));
     }
 
     @Override
     public SubscriptionResponseDTO activateSubscription(String email, SubscriptionPlan plan) {
-        validateSubscriptionUpgrade(email, plan);
-        User user = findUser(email);
-        Subscription subscription = findSubscriptionForUser(user);
-        return applyPlanToSubscription(subscription, plan);
+        return activateSubscription(email, plan == null ? null : plan.name());
+    }
+
+    @Override
+    public SubscriptionResponseDTO activateSubscription(String email, String planName) {
+        Plan plan = findPlan(planName, true);
+        validateSubscriptionUpgrade(email, plan.getName());
+        return applyPlanToSubscription(findSubscriptionForUser(findUser(email)), plan);
     }
 
     @Override
     public SubscriptionResponseDTO upgradeSubscriptionByOrganizationId(String organizationId, SubscriptionPlan plan) {
-        if (plan == null) {
-            throw new BadRequestException("Plan is required");
-        }
-
+        if (plan == null) throw new BadRequestException("Plan is required");
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
-
-        Optional<Subscription> subscriptionOpt = subscriptionRepository.findByOrganizationId(organization.getId());
-        Subscription subscription = subscriptionOpt.orElseGet(() -> createDefaultSubscription(organization));
-        return applyPlanToSubscription(subscription, plan);
+        Subscription subscription = subscriptionRepository.findByOrganizationId(organization.getId())
+                .orElseGet(() -> createDefaultSubscription(organization));
+        return applyPlanToSubscription(subscription, findPlan(plan.name(), false));
     }
 
     @Override
     public SubscriptionResponseDTO expireSubscription(String email) {
-        User user = findUser(email);
-        Subscription subscription = findSubscriptionForUser(user);
+        Subscription subscription = findSubscriptionForUser(findUser(email));
+        LocalDateTime now = LocalDateTime.now();
         subscription.setStatus(SubscriptionStatus.EXPIRED);
-        subscription.setEndDate(LocalDateTime.now());
-        subscription.setUpdatedAt(LocalDateTime.now());
-        Subscription saved = subscriptionRepository.save(subscription);
-        return mapToDto(saved);
+        subscription.setEndDate(now);
+        subscription.setUpdatedAt(now);
+        return mapToDto(subscriptionRepository.save(subscription), findPlan(subscription.getPlan(), false));
     }
 
     @Override
     public SubscriptionResponseDTO getSubscriptionUsage(String email) {
         User user = findUser(email);
         Subscription subscription = findSubscriptionReadOnly(user);
-
-        long projectCount = projectRepository.countByOrganizationId(user.getOrganizationId());
-        long memberCount = projectMemberRepository.countByOrganizationId(user.getOrganizationId());
-        long issueCount = countIssuesForOrganization(user.getOrganizationId());
-
-        SubscriptionResponseDTO dto = mapToDto(subscription);
-        dto.setCurrentProjects((int) projectCount);
-        dto.setCurrentMembers((int) memberCount);
-        dto.setCurrentIssues((int) issueCount);
+        Plan plan = findPlan(subscription.getPlan(), false);
+        SubscriptionResponseDTO dto = mapToDto(subscription, plan);
+        dto.setCurrentProjects((int) projectRepository.countByOrganizationId(user.getOrganizationId()));
+        dto.setCurrentMembers((int) projectMemberRepository.countByOrganizationId(user.getOrganizationId()));
+        dto.setCurrentIssues((int) countIssuesForOrganization(user.getOrganizationId()));
         return dto;
     }
 
     @Override
     public com.bugflow.dto.SubscriptionStatusDTO getSubscriptionStatus(String email) {
-        User user = findUser(email);
-        Subscription subscription = findSubscriptionForUser(user);
         com.bugflow.dto.SubscriptionStatusDTO dto = new com.bugflow.dto.SubscriptionStatusDTO();
-        dto.setStatus(subscription.getStatus());
+        dto.setStatus(findSubscriptionForUser(findUser(email)).getStatus());
         return dto;
     }
 
@@ -182,161 +177,110 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     private Subscription findSubscriptionForUser(User user) {
-        if (user.getOrganizationId() == null) {
-            throw new BadRequestException("Organization is required for subscription");
-        }
-
-        Optional<Subscription> subscriptionOpt = subscriptionRepository.findByOrganizationId(user.getOrganizationId());
-        if (subscriptionOpt.isPresent()) {
-            return subscriptionOpt.get();
-        }
-
-        Subscription subscription = new Subscription();
-        subscription.setOrganizationId(user.getOrganizationId());
-        subscription.setOwnerId(user.getId());
-        subscription.setPlan(SubscriptionPlan.FREE);
-        subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setProjectLimit(resolveProjectLimit(SubscriptionPlan.FREE));
-        subscription.setMemberLimit(resolveMemberLimit(SubscriptionPlan.FREE));
-        subscription.setIssueLimit(resolveIssueLimit(SubscriptionPlan.FREE));
-        subscription.setCurrentProjects(0);
-        subscription.setCurrentMembers(0);
-        subscription.setCurrentIssues(0);
-        subscription.setStartDate(LocalDateTime.now());
-        subscription.setCreatedAt(LocalDateTime.now());
-        subscription.setUpdatedAt(LocalDateTime.now());
-        return subscriptionRepository.save(subscription);
+        if (user.getOrganizationId() == null) throw new BadRequestException("Organization is required for subscription");
+        return subscriptionRepository.findByOrganizationId(user.getOrganizationId())
+                .orElseGet(() -> createDefaultSubscription(user.getOrganizationId(), user.getId()));
     }
 
     private Subscription findSubscriptionReadOnly(User user) {
-        if (user.getOrganizationId() == null) {
-            throw new BadRequestException("Organization is required for subscription");
-        }
-
+        if (user.getOrganizationId() == null) throw new BadRequestException("Organization is required for subscription");
         return subscriptionRepository.findByOrganizationId(user.getOrganizationId())
-                .orElseGet(() -> buildDefaultSubscription(user));
+                .orElseGet(() -> defaultSubscription(user.getOrganizationId(), user.getId()));
     }
 
-    private Subscription buildDefaultSubscription(User user) {
+    private Subscription createDefaultSubscription(Organization organization) {
+        return subscriptionRepository.save(defaultSubscription(organization.getId(), organization.getOwnerId()));
+    }
+
+    private Subscription createDefaultSubscription(String organizationId, String ownerId) {
+        return subscriptionRepository.save(defaultSubscription(organizationId, ownerId));
+    }
+
+    private Subscription defaultSubscription(String organizationId, String ownerId) {
+        Plan free = findPlan("FREE", false);
         Subscription subscription = new Subscription();
-        subscription.setOrganizationId(user.getOrganizationId());
-        subscription.setOwnerId(user.getId());
-        subscription.setPlan(SubscriptionPlan.FREE);
+        subscription.setOrganizationId(organizationId);
+        subscription.setOwnerId(ownerId);
+        subscription.setPlan(free.getName());
         subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setProjectLimit(resolveProjectLimit(SubscriptionPlan.FREE));
-        subscription.setMemberLimit(resolveMemberLimit(SubscriptionPlan.FREE));
-        subscription.setIssueLimit(resolveIssueLimit(SubscriptionPlan.FREE));
+        subscription.setProjectLimit(free.getProjectLimit());
+        subscription.setMemberLimit(free.getMemberLimit());
+        subscription.setIssueLimit(free.getIssueLimit());
         subscription.setCurrentProjects(0);
         subscription.setCurrentMembers(0);
         subscription.setCurrentIssues(0);
-        subscription.setStartDate(LocalDateTime.now());
-        subscription.setCreatedAt(LocalDateTime.now());
-        subscription.setUpdatedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        subscription.setStartDate(now);
+        subscription.setCreatedAt(now);
+        subscription.setUpdatedAt(now);
         return subscription;
     }
 
-    private void validatePlanChange(Subscription subscription, SubscriptionPlan targetPlan) {
-        if (subscription.getPlan() == null) {
-            return;
-        }
-
-        if (targetPlan == null || subscription.getPlan() == targetPlan) {
-            return;
-        }
-
-        boolean isDowngrade = targetPlan.ordinal() < subscription.getPlan().ordinal();
-        if (!isDowngrade) {
-            return;
-        }
-
-        long currentProjects = projectRepository.countByOrganizationId(subscription.getOrganizationId());
-        long currentMembers = projectMemberRepository.countByOrganizationId(subscription.getOrganizationId());
-        long currentIssues = countIssuesForOrganization(subscription.getOrganizationId());
-
-        if (targetPlan.getProjectLimit() != null && currentProjects > targetPlan.getProjectLimit()) {
-            throw new BadRequestException("Cannot downgrade. Current organization exceeds " + targetPlan.getDisplayName() + " plan limits.");
-        }
-
-        if (targetPlan.getMemberLimit() != null && currentMembers > targetPlan.getMemberLimit()) {
-            throw new BadRequestException("Cannot downgrade. Current organization exceeds " + targetPlan.getDisplayName() + " plan limits.");
-        }
-
-        if (targetPlan.getIssueLimit() != null && currentIssues > targetPlan.getIssueLimit()) {
-            throw new BadRequestException("Cannot downgrade. Current organization exceeds " + targetPlan.getDisplayName() + " plan limits.");
+    private void validatePlanChange(Subscription subscription, Plan targetPlan) {
+        long projects = projectRepository.countByOrganizationId(subscription.getOrganizationId());
+        long members = projectMemberRepository.countByOrganizationId(subscription.getOrganizationId());
+        long issues = countIssuesForOrganization(subscription.getOrganizationId());
+        if ((targetPlan.getProjectLimit() != null && projects > targetPlan.getProjectLimit())
+                || (targetPlan.getMemberLimit() != null && members > targetPlan.getMemberLimit())
+                || (targetPlan.getIssueLimit() != null && issues > targetPlan.getIssueLimit())) {
+            throw new BadRequestException("Cannot change plan. Current organization exceeds "
+                    + targetPlan.getDisplayName() + " plan limits.");
         }
     }
 
     private long countIssuesForOrganization(String organizationId) {
         List<Project> projects = projectRepository.findByOrganizationId(organizationId);
-        if (projects == null || projects.isEmpty()) {
-            return 0;
-        }
-
-        return issueRepository.countByProjectIdIn(projects.stream()
-                .map(Project::getId)
-                .toList());
+        return projects == null || projects.isEmpty() ? 0
+                : issueRepository.countByProjectIdIn(projects.stream().map(Project::getId).toList());
     }
 
-    private SubscriptionResponseDTO applyPlanToSubscription(Subscription subscription, SubscriptionPlan plan) {
+    private SubscriptionResponseDTO applyPlanToSubscription(Subscription subscription, Plan plan) {
         LocalDateTime now = LocalDateTime.now();
-
-        subscription.setPlan(plan);
+        subscription.setPlan(plan.getName());
         subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setProjectLimit(resolveProjectLimit(plan));
-        subscription.setMemberLimit(resolveMemberLimit(plan));
-        subscription.setIssueLimit(resolveIssueLimit(plan));
+        subscription.setProjectLimit(plan.getProjectLimit());
+        subscription.setMemberLimit(plan.getMemberLimit());
+        subscription.setIssueLimit(plan.getIssueLimit());
         subscription.setStartDate(now);
-        subscription.setEndDate(resolveEndDate(plan, now));
+        subscription.setEndDate(plan.getDurationDays() == null ? null : now.plusDays(plan.getDurationDays()));
         subscription.setUpdatedAt(now);
-
-        Subscription saved = subscriptionRepository.save(subscription);
-        return mapToDto(saved);
+        return mapToDto(subscriptionRepository.save(subscription), plan);
     }
 
-    private LocalDateTime resolveEndDate(SubscriptionPlan plan, LocalDateTime startDate) {
-        return plan.getDurationDays() == null ? null : startDate.plusDays(plan.getDurationDays());
+    private Plan findPlan(String name, boolean requireActive) {
+        if (name == null || name.isBlank()) throw new BadRequestException("Plan is required");
+        Optional<Plan> plan = planRepository.findByNameIgnoreCase(name.trim());
+        if (plan.isPresent()) {
+            if (requireActive && !plan.get().isActive()) throw new BadRequestException("Selected plan is inactive");
+            return plan.get();
+        }
+        // Legacy fallback keeps existing subscriptions usable until their plans are migrated to MongoDB.
+        try {
+            SubscriptionPlan legacy = SubscriptionPlan.valueOf(name.trim().toUpperCase());
+            Plan fallback = new Plan();
+            fallback.setName(legacy.name());
+            fallback.setDisplayName(legacy.getDisplayName());
+            fallback.setPrice(legacy.getPrice());
+            fallback.setDurationDays(legacy.getDurationDays());
+            fallback.setProjectLimit(legacy.getProjectLimit());
+            fallback.setMemberLimit(legacy.getMemberLimit());
+            fallback.setIssueLimit(legacy.getIssueLimit());
+            return fallback;
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid plan selected");
+        }
     }
 
-    private Subscription createDefaultSubscription(Organization organization) {
-        Subscription subscription = new Subscription();
-        subscription.setOrganizationId(organization.getId());
-        subscription.setOwnerId(organization.getOwnerId());
-        subscription.setPlan(SubscriptionPlan.FREE);
-        subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setProjectLimit(resolveProjectLimit(SubscriptionPlan.FREE));
-        subscription.setMemberLimit(resolveMemberLimit(SubscriptionPlan.FREE));
-        subscription.setIssueLimit(resolveIssueLimit(SubscriptionPlan.FREE));
-        subscription.setCurrentProjects(0);
-        subscription.setCurrentMembers(0);
-        subscription.setCurrentIssues(0);
-        subscription.setStartDate(LocalDateTime.now());
-        subscription.setCreatedAt(LocalDateTime.now());
-        subscription.setUpdatedAt(LocalDateTime.now());
-        return subscriptionRepository.save(subscription);
-    }
-
-    private Integer resolveProjectLimit(SubscriptionPlan plan) {
-        return plan.getProjectLimit();
-    }
-
-    private Integer resolveMemberLimit(SubscriptionPlan plan) {
-        return plan.getMemberLimit();
-    }
-
-    private Integer resolveIssueLimit(SubscriptionPlan plan) {
-        return plan.getIssueLimit();
-    }
-
-    private SubscriptionResponseDTO mapToDto(Subscription subscription) {
+    private SubscriptionResponseDTO mapToDto(Subscription subscription, Plan plan) {
         SubscriptionResponseDTO dto = new SubscriptionResponseDTO();
         dto.setId(subscription.getId());
         dto.setOrganizationId(subscription.getOrganizationId());
         dto.setOwnerId(subscription.getOwnerId());
         dto.setPlan(subscription.getPlan());
         dto.setStatus(subscription.getStatus());
-        dto.setProjectLimit(subscription.getProjectLimit());
-        dto.setMemberLimit(subscription.getMemberLimit());
-        dto.setIssueLimit(subscription.getIssueLimit());
+        dto.setProjectLimit(plan.getProjectLimit());
+        dto.setMemberLimit(plan.getMemberLimit());
+        dto.setIssueLimit(plan.getIssueLimit());
         dto.setCurrentProjects(subscription.getCurrentProjects());
         dto.setCurrentMembers(subscription.getCurrentMembers());
         dto.setCurrentIssues(subscription.getCurrentIssues());

@@ -7,11 +7,13 @@ import org.springframework.stereotype.Service;
 
 import com.bugflow.entity.Subscription;
 import com.bugflow.entity.SubscriptionStatus;
+import com.bugflow.entity.Plan;
 import com.bugflow.exception.SubscriptionExpiredException;
 import com.bugflow.exception.SubscriptionLimitExceededException;
 import com.bugflow.repository.IssueRepository;
 import com.bugflow.repository.ProjectMemberRepository;
 import com.bugflow.repository.ProjectRepository;
+import com.bugflow.repository.PlanRepository;
 import com.bugflow.repository.SubscriptionRepository;
 
 @Service
@@ -21,16 +23,19 @@ public class SubscriptionValidator {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final IssueRepository issueRepository;
+    private final PlanRepository planRepository;
 
     public SubscriptionValidator(
             SubscriptionRepository subscriptionRepository,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
-            IssueRepository issueRepository) {
+            IssueRepository issueRepository,
+            PlanRepository planRepository) {
         this.subscriptionRepository = subscriptionRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.issueRepository = issueRepository;
+        this.planRepository = planRepository;
     }
 
     public void checkProjectLimit(String organizationId) {
@@ -41,7 +46,7 @@ public class SubscriptionValidator {
             throw new SubscriptionExpiredException("Your subscription has expired.");
         }
 
-        Integer limit = subscription != null ? subscription.getProjectLimit() : null;
+        Integer limit = projectLimit(subscription);
 
         if (limit == null) return; // unlimited
 
@@ -59,7 +64,7 @@ public class SubscriptionValidator {
             throw new SubscriptionExpiredException("Your subscription has expired.");
         }
 
-        Integer limit = subscription != null ? subscription.getMemberLimit() : null;
+        Integer limit = memberLimit(subscription);
 
         if (limit == null) return; // unlimited
 
@@ -77,7 +82,7 @@ public class SubscriptionValidator {
             throw new SubscriptionExpiredException("Your subscription has expired.");
         }
 
-        Integer limit = subscription != null ? subscription.getIssueLimit() : null;
+        Integer limit = issueLimit(subscription);
 
         if (limit == null) return; // unlimited
 
@@ -93,5 +98,25 @@ public class SubscriptionValidator {
         if (current >= limit) {
             throw new SubscriptionLimitExceededException("Issue limit reached.");
         }
+    }
+
+    private Plan plan(Subscription subscription) {
+        if (subscription == null || subscription.getPlan() == null) return null;
+        return planRepository.findByNameIgnoreCase(subscription.getPlan()).orElse(null);
+    }
+
+    private Integer projectLimit(Subscription subscription) {
+        Plan plan = plan(subscription);
+        return plan != null ? plan.getProjectLimit() : subscription == null ? null : subscription.getProjectLimit();
+    }
+
+    private Integer memberLimit(Subscription subscription) {
+        Plan plan = plan(subscription);
+        return plan != null ? plan.getMemberLimit() : subscription == null ? null : subscription.getMemberLimit();
+    }
+
+    private Integer issueLimit(Subscription subscription) {
+        Plan plan = plan(subscription);
+        return plan != null ? plan.getIssueLimit() : subscription == null ? null : subscription.getIssueLimit();
     }
 }

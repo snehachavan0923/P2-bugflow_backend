@@ -12,12 +12,14 @@ import com.bugflow.entity.User;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.entity.Subscription;
+import com.bugflow.entity.Plan;
 import com.bugflow.entity.SubscriptionPlan;
 import com.bugflow.entity.SubscriptionStatus;
 import com.bugflow.repository.OrganizationRepository;
 import com.bugflow.repository.ProjectRepository;
 import com.bugflow.repository.SubscriptionRepository;
 import com.bugflow.repository.UserRepository;
+import com.bugflow.repository.PlanRepository;
 
 @Service
 public class OrganizationService {
@@ -28,12 +30,14 @@ public class OrganizationService {
     private final ProjectRepository
     projectRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final PlanRepository planRepository;
 
     public OrganizationService(
             OrganizationRepository organizationRepository,
             UserRepository userRepository,
             ProjectRepository projectRepository,
-            SubscriptionRepository subscriptionRepository) {
+            SubscriptionRepository subscriptionRepository,
+            PlanRepository planRepository) {
 
         this.organizationRepository =
                 organizationRepository;
@@ -46,6 +50,7 @@ public class OrganizationService {
 
         this.subscriptionRepository =
                 subscriptionRepository;
+        this.planRepository = planRepository;
     }
 
     public Organization createOrganization(
@@ -84,11 +89,12 @@ public class OrganizationService {
         Subscription subscription = new Subscription();
         subscription.setOrganizationId(org.getId());
         subscription.setOwnerId(owner.getId());
-        subscription.setPlan(SubscriptionPlan.FREE);
+        Plan freePlan = planRepository.findByNameIgnoreCase("FREE").orElse(null);
+        subscription.setPlan("FREE");
         subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setProjectLimit(SubscriptionPlan.FREE.getProjectLimit());
-        subscription.setMemberLimit(SubscriptionPlan.FREE.getMemberLimit());
-        subscription.setIssueLimit(SubscriptionPlan.FREE.getIssueLimit());
+        subscription.setProjectLimit(freePlan == null ? SubscriptionPlan.FREE.getProjectLimit() : freePlan.getProjectLimit());
+        subscription.setMemberLimit(freePlan == null ? SubscriptionPlan.FREE.getMemberLimit() : freePlan.getMemberLimit());
+        subscription.setIssueLimit(freePlan == null ? SubscriptionPlan.FREE.getIssueLimit() : freePlan.getIssueLimit());
         subscription.setCurrentProjects(0);
         subscription.setCurrentMembers(0);
         subscription.setCurrentIssues(0);

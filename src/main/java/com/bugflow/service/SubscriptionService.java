@@ -17,7 +17,11 @@ public interface SubscriptionService {
 
     SubscriptionResponseDTO validateSubscriptionUpgrade(String email, SubscriptionPlan plan);
 
+    SubscriptionResponseDTO validateSubscriptionUpgrade(String email, String planName);
+
     SubscriptionResponseDTO activateSubscription(String email, SubscriptionPlan plan);
+
+    SubscriptionResponseDTO activateSubscription(String email, String planName);
 
     SubscriptionResponseDTO upgradeSubscriptionByOrganizationId(String organizationId, SubscriptionPlan plan);
 

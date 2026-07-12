@@ -12,38 +12,40 @@ import com.bugflow.dto.SubscriptionResponseDTO;
 import com.bugflow.entity.Payment;
 import com.bugflow.entity.PaymentMethod;
 import com.bugflow.entity.PaymentStatus;
-import com.bugflow.entity.SubscriptionPlan;
+import com.bugflow.entity.Plan;
 import com.bugflow.exception.BadRequestException;
 import com.bugflow.repository.PaymentRepository;
+import com.bugflow.repository.PlanRepository;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
-    private static final String CURRENCY_INR = "INR";
-
     private final PaymentRepository paymentRepository;
     private final SubscriptionService subscriptionService;
+    private final PlanRepository planRepository;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, SubscriptionService subscriptionService) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository, SubscriptionService subscriptionService,
+            PlanRepository planRepository) {
         this.paymentRepository = paymentRepository;
         this.subscriptionService = subscriptionService;
+        this.planRepository = planRepository;
     }
 
     @Override
     public PaymentResponseDTO createSubscriptionPayment(String email, PaymentRequestDTO request) {
-        SubscriptionPlan plan = parsePlan(request);
+        Plan plan = findPlan(request);
 
         // Validate before recording a successful payment. The subscription is not activated here.
-        SubscriptionResponseDTO subscription = subscriptionService.validateSubscriptionUpgrade(email, plan);
+        SubscriptionResponseDTO subscription = subscriptionService.validateSubscriptionUpgrade(email, plan.getName());
         LocalDateTime now = LocalDateTime.now();
 
         Payment payment = new Payment();
         payment.setOrganizationId(subscription.getOrganizationId());
         payment.setOwnerId(subscription.getOwnerId());
         payment.setSubscriptionId(subscription.getId());
-        payment.setPlan(plan);
+        payment.setPlan(plan.getName());
         payment.setAmount(plan.getPrice());
-        payment.setCurrency(CURRENCY_INR);
+        payment.setCurrency(plan.getCurrency());
         payment.setPaymentMethod(PaymentMethod.MANUAL);
         // Replace this assignment with gateway verification when a provider is introduced.
         payment.setPaymentStatus(PaymentStatus.SUCCESS);
@@ -56,7 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             // This must remain after payment persistence so a subscription is never activated first.
-            subscriptionService.activateSubscription(email, plan);
+            subscriptionService.activateSubscription(email, plan.getName());
             return mapToDto(savedPayment);
         } catch (RuntimeException ex) {
             savedPayment.setPaymentStatus(PaymentStatus.FAILED);
@@ -91,16 +93,15 @@ public class PaymentServiceImpl implements PaymentService {
                 .toList();
     }
 
-    private SubscriptionPlan parsePlan(PaymentRequestDTO request) {
+    private Plan findPlan(PaymentRequestDTO request) {
         if (request == null || request.getPlan() == null || request.getPlan().isBlank()) {
             throw new BadRequestException("Plan is required");
         }
 
-        try {
-            return SubscriptionPlan.valueOf(request.getPlan().trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new BadRequestException("Invalid plan selected");
-        }
+        Plan plan = planRepository.findByNameIgnoreCase(request.getPlan().trim())
+                .orElseThrow(() -> new BadRequestException("Invalid plan selected"));
+        if (!plan.isActive()) throw new BadRequestException("Selected plan is inactive");
+        return plan;
     }
 
     private String generateTransactionId() {

@@ -19,6 +19,10 @@ public class AdminOwnerResponseDTO {
     private String accountStatus;
 
     private LocalDateTime createdAt;
+    private String subscriptionPlan;
+    private String subscriptionStatus;
+    private String paymentStatus;
+    private LocalDateTime expiryDate;
 
     public String getOwnerId() {
         return ownerId;
@@ -76,4 +80,12 @@ public class AdminOwnerResponseDTO {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public String getSubscriptionPlan() { return subscriptionPlan; }
+    public void setSubscriptionPlan(String subscriptionPlan) { this.subscriptionPlan = subscriptionPlan; }
+    public String getSubscriptionStatus() { return subscriptionStatus; }
+    public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public LocalDateTime getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(LocalDateTime expiryDate) { this.expiryDate = expiryDate; }
 }

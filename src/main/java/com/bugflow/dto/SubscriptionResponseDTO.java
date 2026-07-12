@@ -2,7 +2,6 @@ package com.bugflow.dto;
 
 import java.time.LocalDateTime;
 
-import com.bugflow.entity.SubscriptionPlan;
 import com.bugflow.entity.SubscriptionStatus;
 
 public class SubscriptionResponseDTO {
@@ -10,7 +9,7 @@ public class SubscriptionResponseDTO {
     private String id;
     private String organizationId;
     private String ownerId;
-    private SubscriptionPlan plan;
+    private String plan;
     private SubscriptionStatus status;
     private Integer projectLimit;
     private Integer memberLimit;
@@ -47,11 +46,11 @@ public class SubscriptionResponseDTO {
         this.ownerId = ownerId;
     }
 
-    public SubscriptionPlan getPlan() {
+    public String getPlan() {
         return plan;
     }
 
-    public void setPlan(SubscriptionPlan plan) {
+    public void setPlan(String plan) {
         this.plan = plan;
     }
 

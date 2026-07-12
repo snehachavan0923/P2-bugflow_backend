@@ -9,11 +9,15 @@ import com.bugflow.dto.admin.AdminOrganizationResponseDTO;
 import com.bugflow.entity.Organization;
 import com.bugflow.entity.OrganizationStatus;
 import com.bugflow.entity.User;
+import com.bugflow.entity.Subscription;
+import com.bugflow.entity.Payment;
 import com.bugflow.exception.ResourceNotFoundException;
 import com.bugflow.repository.OrganizationRepository;
 import com.bugflow.repository.ProjectMemberRepository;
 import com.bugflow.repository.ProjectRepository;
 import com.bugflow.repository.UserRepository;
+import com.bugflow.repository.SubscriptionRepository;
+import com.bugflow.repository.PaymentRepository;
 
 @Service
 public class AdminOrganizationServiceImpl
@@ -23,17 +27,23 @@ public class AdminOrganizationServiceImpl
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final PaymentRepository paymentRepository;
 
     public AdminOrganizationServiceImpl(
             OrganizationRepository organizationRepository,
             UserRepository userRepository,
             ProjectRepository projectRepository,
-            ProjectMemberRepository projectMemberRepository) {
+            ProjectMemberRepository projectMemberRepository,
+            SubscriptionRepository subscriptionRepository,
+            PaymentRepository paymentRepository) {
 
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @Override
@@ -131,6 +141,17 @@ public class AdminOrganizationServiceImpl
 
         dto.setCreatedAt(
                 organization.getCreatedAt());
+
+        Subscription subscription = subscriptionRepository.findByOrganizationId(organization.getId()).orElse(null);
+        if (subscription != null) {
+            dto.setSubscriptionPlan(subscription.getPlan());
+            dto.setSubscriptionStatus(subscription.getStatus() == null ? null : subscription.getStatus().name());
+            dto.setExpiryDate(subscription.getEndDate());
+        }
+        Payment payment = paymentRepository.findByOrganizationIdOrderByPaymentDateDesc(organization.getId())
+                .stream().findFirst().orElse(null);
+        dto.setPaymentStatus(payment == null || payment.getPaymentStatus() == null
+                ? null : payment.getPaymentStatus().name());
 
         return dto;
     }

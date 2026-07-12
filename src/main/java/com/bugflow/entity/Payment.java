@@ -15,7 +15,7 @@ public class Payment {
     private String organizationId;
     private String ownerId;
     private String subscriptionId;
-    private SubscriptionPlan plan;
+    private String plan;
     private BigDecimal amount;
     private String currency = "INR";
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
@@ -36,8 +36,9 @@ public class Payment {
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
     public String getSubscriptionId() { return subscriptionId; }
     public void setSubscriptionId(String subscriptionId) { this.subscriptionId = subscriptionId; }
-    public SubscriptionPlan getPlan() { return plan; }
-    public void setPlan(SubscriptionPlan plan) { this.plan = plan; }
+    public String getPlan() { return plan; }
+    public void setPlan(String plan) { this.plan = plan; }
+    public void setPlan(SubscriptionPlan plan) { this.plan = plan == null ? null : plan.name(); }
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public String getCurrency() { return currency; }

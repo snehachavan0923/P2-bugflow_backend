@@ -20,6 +20,10 @@ public class AdminOrganizationResponseDTO {
     private OrganizationStatus organizationStatus;
 
     private LocalDateTime createdAt;
+    private String subscriptionPlan;
+    private String subscriptionStatus;
+    private String paymentStatus;
+    private LocalDateTime expiryDate;
     
 
     public String getOrganizationId() {
@@ -85,6 +89,14 @@ public class AdminOrganizationResponseDTO {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public String getSubscriptionPlan() { return subscriptionPlan; }
+    public void setSubscriptionPlan(String subscriptionPlan) { this.subscriptionPlan = subscriptionPlan; }
+    public String getSubscriptionStatus() { return subscriptionStatus; }
+    public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public LocalDateTime getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(LocalDateTime expiryDate) { this.expiryDate = expiryDate; }
     
 
 }

@@ -66,7 +66,12 @@ public class SecurityConfig {
             	            HttpMethod.GET,
             	            "/organizations/settings")
             	    .hasRole("Owner")
-	            	    .requestMatchers("/subscriptions/**")
+					.requestMatchers(
+					HttpMethod.GET,
+					"/subscriptions/plans")
+					.permitAll()
+					
+	            	.requestMatchers("/subscriptions/**")
             	    .authenticated()            	    
             	    // Admin
             	    .requestMatchers(

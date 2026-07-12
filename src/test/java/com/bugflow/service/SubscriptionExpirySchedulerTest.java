@@ -36,7 +36,10 @@ class SubscriptionExpirySchedulerTest {
         active.setStatus(SubscriptionStatus.ACTIVE);
         active.setEndDate(LocalDateTime.now().plusDays(1));
 
-        when(subscriptionRepository.findAll()).thenReturn(List.of(expired, active));
+        when(subscriptionRepository.findByStatusAndEndDateLessThanEqual(
+                org.mockito.ArgumentMatchers.eq(SubscriptionStatus.ACTIVE),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class)))
+                .thenReturn(List.of(expired));
 
         SubscriptionExpiryScheduler scheduler = new SubscriptionExpiryScheduler(subscriptionRepository);
         scheduler.expireSubscriptions();
@@ -52,7 +55,10 @@ class SubscriptionExpirySchedulerTest {
         active.setStatus(SubscriptionStatus.ACTIVE);
         active.setEndDate(LocalDateTime.now().plusDays(1));
 
-        when(subscriptionRepository.findAll()).thenReturn(List.of(active));
+        when(subscriptionRepository.findByStatusAndEndDateLessThanEqual(
+                org.mockito.ArgumentMatchers.eq(SubscriptionStatus.ACTIVE),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class)))
+                .thenReturn(List.of());
 
         SubscriptionExpiryScheduler scheduler = new SubscriptionExpiryScheduler(subscriptionRepository);
         scheduler.expireSubscriptions();

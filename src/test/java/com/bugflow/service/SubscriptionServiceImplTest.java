@@ -29,6 +29,7 @@ import com.bugflow.repository.IssueRepository;
 import com.bugflow.repository.OrganizationRepository;
 import com.bugflow.repository.ProjectMemberRepository;
 import com.bugflow.repository.ProjectRepository;
+import com.bugflow.repository.PlanRepository;
 import com.bugflow.repository.SubscriptionRepository;
 import com.bugflow.repository.UserRepository;
 
@@ -52,6 +53,9 @@ class SubscriptionServiceImplTest {
 
     @Mock
     private IssueRepository issueRepository;
+
+    @Mock
+    private PlanRepository planRepository;
 
     @InjectMocks
     private SubscriptionServiceImpl subscriptionService;
@@ -86,7 +90,7 @@ class SubscriptionServiceImplTest {
 
         SubscriptionResponseDTO updated = subscriptionService.upgradeSubscription("owner@example.com", request);
 
-        assertEquals(SubscriptionPlan.STARTER, updated.getPlan());
+        assertEquals("STARTER", updated.getPlan());
         assertEquals(5, updated.getProjectLimit());
         assertEquals(25, updated.getMemberLimit());
         assertNull(updated.getIssueLimit());
@@ -124,7 +128,7 @@ class SubscriptionServiceImplTest {
 
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> subscriptionService.upgradeSubscription("owner@example.com", request));
-        assertEquals("Cannot downgrade. Current organization exceeds Starter plan limits.", exception.getMessage());
+        assertEquals("Cannot change plan. Current organization exceeds Starter plan limits.", exception.getMessage());
         verify(subscriptionRepository, never()).save(any(com.bugflow.entity.Subscription.class));
     }
 
@@ -183,7 +187,7 @@ class SubscriptionServiceImplTest {
 
         SubscriptionResponseDTO usage = subscriptionService.getSubscriptionUsage("owner@example.com");
 
-        assertEquals(SubscriptionPlan.FREE, usage.getPlan());
+        assertEquals("FREE", usage.getPlan());
         assertEquals(0, usage.getCurrentProjects());
         assertEquals(0, usage.getCurrentMembers());
         assertEquals(0, usage.getCurrentIssues());
