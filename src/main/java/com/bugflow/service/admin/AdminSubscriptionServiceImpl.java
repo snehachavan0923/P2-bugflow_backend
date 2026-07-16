@@ -208,6 +208,29 @@ public class AdminSubscriptionServiceImpl
         dto.todayRevenue = sum(filterByDate(successfulPayments, today, null));
         dto.activeSubscriptions = subscriptions.countByStatus(SubscriptionStatus.ACTIVE);
         dto.expiredSubscriptions = subscriptions.countByStatus(SubscriptionStatus.EXPIRED);
+        
+        // Count plan totals directly from Subscription collection
+        dto.freePlanCount = mongoTemplate.count(
+                new Query(Criteria.where("plan").is("FREE")), 
+                Subscription.class);
+        dto.starterPlanCount = mongoTemplate.count(
+                new Query(Criteria.where("plan").is("STARTER")), 
+                Subscription.class);
+        dto.businessPlanCount = mongoTemplate.count(
+                new Query(Criteria.where("plan").is("BUSINESS")), 
+                Subscription.class);
+        dto.enterprisePlanCount = mongoTemplate.count(
+                new Query(Criteria.where("plan").is("ENTERPRISE")), 
+                Subscription.class);
+        
+        // Count payment statuses directly from Payment collection
+        dto.successfulPaymentsCount = mongoTemplate.count(
+                new Query(Criteria.where("paymentStatus").is(PaymentStatus.SUCCESS)), 
+                Payment.class);
+        dto.failedPaymentsCount = mongoTemplate.count(
+                new Query(Criteria.where("paymentStatus").is(PaymentStatus.FAILED)), 
+                Payment.class);
+        
         dto.renewalsToday = filterByDate(successfulPayments, today, null).size();
         dto.renewalsThisWeek = filterByDate(successfulPayments, weekStart, null).size();
         dto.monthlyRevenueChart = buildMonthlyRevenueChart(fromDate, toDate, plan);
@@ -243,29 +266,26 @@ public class AdminSubscriptionServiceImpl
                 ? toDate.toLocalDate()
                 : LocalDate.now();
 
-        Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
-                Aggregation.project("amount", "paymentDate")
-                        .andExpression("year(paymentDate)").as("year")
-                        .andExpression("month(paymentDate)").as("month"),
-                Aggregation.group("year", "month").sum("amount").as("revenue"),
-                Aggregation.project("revenue").and("_id.year").as("year").and("_id.month").as("month"),
-                Aggregation.sort(Sort.by(Sort.Direction.ASC, "year", "month")));
+        // Fetch matching successful payments and aggregate in-memory to avoid
+        // Mongo aggregation type/serialization mismatches for numeric sums.
+        Query q = new Query(buildPaymentCriteria(fromDate, toDate, plan));
+        List<Payment> matched = mongoTemplate.find(q, Payment.class);
 
-        List<Document> grouped =
-                mongoTemplate.aggregate(aggregation, Payment.class, Document.class).getMappedResults();
+        Map<String, BigDecimal> sums = new java.util.HashMap<>();
+        for (Payment p : matched) {
+            if (p.getPaymentDate() == null || p.getAmount() == null) continue;
+            int y = p.getPaymentDate().getYear();
+            int m = p.getPaymentDate().getMonthValue();
+            String key = String.format("%04d-%02d", y, m);
+            sums.put(key, sums.getOrDefault(key, BigDecimal.ZERO).add(p.getAmount()));
+        }
 
-                List<RevenueValueDTO> monthlySeries = new java.util.ArrayList<>();
-                for (Document doc : grouped) {
-                        Integer year = toInteger(doc.get("year"));
-                        Integer monthValue = toInteger(doc.get("month"));
-                        BigDecimal revenue = toBigDecimal(doc.get("revenue"));
-                        if (year != null && monthValue != null) {
-                                String label = String.format("%04d-%02d", year, monthValue);
-                                monthlySeries.add(new RevenueValueDTO(label, revenue == null ? BigDecimal.ZERO : revenue));
-                        }
-                }
+        List<RevenueValueDTO> monthlySeries = new java.util.ArrayList<>();
+        for (Map.Entry<String, BigDecimal> e : sums.entrySet()) {
+            monthlySeries.add(new RevenueValueDTO(e.getKey(), e.getValue()));
+        }
 
+        // Ensure series is filled for months with zero values and sorted
         return fillMonthlyChart(startDate, endDate, monthlySeries);
     }
 
@@ -273,22 +293,24 @@ public class AdminSubscriptionServiceImpl
             LocalDateTime fromDate,
             LocalDateTime toDate,
             String plan) {
+                // Aggregate payments by plan in-memory to ensure numeric accuracy and
+                // correct matching of SUCCESS payments.
+                Query q = new Query(buildPaymentCriteria(fromDate, toDate, plan));
+                List<Payment> matched = mongoTemplate.find(q, Payment.class);
 
-        Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
-                Aggregation.group("plan").sum("amount").as("value"),
-                Aggregation.project("value").and("_id").as("label"),
-                Aggregation.sort(Sort.by(Sort.Direction.ASC, "label")));
+                Map<String, BigDecimal> sums = new java.util.HashMap<>();
+                for (Payment p : matched) {
+                        if (p.getPlan() == null || p.getAmount() == null) continue;
+                        String key = p.getPlan();
+                        sums.put(key, sums.getOrDefault(key, BigDecimal.ZERO).add(p.getAmount()));
+                }
 
-        List<Document> docs = mongoTemplate.aggregate(aggregation, Payment.class, Document.class).getMappedResults();
-        List<RevenueValueDTO> result = new java.util.ArrayList<>();
-        for (Document doc : docs) {
-            String label = doc.getString("label");
-            BigDecimal value = toBigDecimal(doc.get("value"));
-            result.add(new RevenueValueDTO(label, value == null ? BigDecimal.ZERO : value));
-        }
+                List<RevenueValueDTO> result = new java.util.ArrayList<>();
+                sums.entrySet().stream()
+                                .sorted(Map.Entry.comparingByKey())
+                                .forEach(e -> result.add(new RevenueValueDTO(e.getKey(), e.getValue())));
 
-        return result;
+                return result;
     }
 
     private List<PlanCountDTO> buildPlanDistribution(
@@ -296,13 +318,21 @@ public class AdminSubscriptionServiceImpl
             LocalDateTime toDate,
             String plan) {
 
+        // Count subscriptions directly from the subscriptions collection
+        // grouped by the `plan` field. Filter by plan param if provided and
+        // only consider active subscriptions for distribution.
+        Criteria c = Criteria.where("status").is(SubscriptionStatus.ACTIVE);
+        if (plan != null && !plan.isBlank()) {
+            c = c.and("plan").is(plan);
+        }
+
         Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
+                Aggregation.match(c),
                 Aggregation.group("plan").count().as("count"),
                 Aggregation.project("count").and("_id").as("plan"),
                 Aggregation.sort(Sort.by(Sort.Direction.ASC, "plan")));
 
-        return mongoTemplate.aggregate(aggregation, Payment.class, PlanCountDTO.class).getMappedResults();
+        return mongoTemplate.aggregate(aggregation, Subscription.class, PlanCountDTO.class).getMappedResults();
     }
 
     private List<RenewalsTrendDTO> buildRenewalsTrend(

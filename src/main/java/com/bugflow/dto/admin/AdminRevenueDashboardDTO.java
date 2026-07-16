@@ -12,6 +12,12 @@ public class AdminRevenueDashboardDTO {
     public long expiredSubscriptions;
     public long renewalsToday;
     public long renewalsThisWeek;
+    public long freePlanCount;
+    public long starterPlanCount;
+    public long businessPlanCount;
+    public long enterprisePlanCount;
+    public long successfulPaymentsCount;
+    public long failedPaymentsCount;
     public List<RevenueValueDTO> monthlyRevenueChart;
     public List<RevenueValueDTO> revenueByPlan;
     public List<PlanCountDTO> planDistribution;
@@ -103,5 +109,53 @@ public class AdminRevenueDashboardDTO {
 
     public void setRenewalsTrend(List<RenewalsTrendDTO> renewalsTrend) {
         this.renewalsTrend = renewalsTrend;
+    }
+
+    public long getFreePlanCount() {
+        return freePlanCount;
+    }
+
+    public void setFreePlanCount(long freePlanCount) {
+        this.freePlanCount = freePlanCount;
+    }
+
+    public long getStarterPlanCount() {
+        return starterPlanCount;
+    }
+
+    public void setStarterPlanCount(long starterPlanCount) {
+        this.starterPlanCount = starterPlanCount;
+    }
+
+    public long getBusinessPlanCount() {
+        return businessPlanCount;
+    }
+
+    public void setBusinessPlanCount(long businessPlanCount) {
+        this.businessPlanCount = businessPlanCount;
+    }
+
+    public long getEnterprisePlanCount() {
+        return enterprisePlanCount;
+    }
+
+    public void setEnterprisePlanCount(long enterprisePlanCount) {
+        this.enterprisePlanCount = enterprisePlanCount;
+    }
+
+    public long getSuccessfulPaymentsCount() {
+        return successfulPaymentsCount;
+    }
+
+    public void setSuccessfulPaymentsCount(long successfulPaymentsCount) {
+        this.successfulPaymentsCount = successfulPaymentsCount;
+    }
+
+    public long getFailedPaymentsCount() {
+        return failedPaymentsCount;
+    }
+
+    public void setFailedPaymentsCount(long failedPaymentsCount) {
+        this.failedPaymentsCount = failedPaymentsCount;
     }
 }
