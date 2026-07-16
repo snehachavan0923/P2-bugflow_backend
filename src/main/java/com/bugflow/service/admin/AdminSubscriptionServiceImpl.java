@@ -1,20 +1,32 @@
 package com.bugflow.service.admin;
 
+import java.math.BigDecimal;
+import org.bson.types.Decimal128;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.bson.Document;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import com.bugflow.dto.admin.AdminPaymentDTO;
+import com.bugflow.dto.admin.AdminRevenueDashboardDTO;
 import com.bugflow.dto.admin.AdminSubscriptionDTO;
 import com.bugflow.dto.admin.PageResponseDTO;
+import com.bugflow.dto.admin.PlanCountDTO;
+import com.bugflow.dto.admin.RevenueValueDTO;
+import com.bugflow.dto.admin.RenewalsTrendDTO;
 import com.bugflow.entity.Organization;
 import com.bugflow.entity.Payment;
 import com.bugflow.entity.PaymentStatus;
@@ -35,17 +47,20 @@ public class AdminSubscriptionServiceImpl
     private final PaymentRepository payments;
     private final OrganizationRepository organizations;
     private final UserRepository users;
+    private final MongoTemplate mongoTemplate;
 
     public AdminSubscriptionServiceImpl(
             SubscriptionRepository subscriptions,
             PaymentRepository payments,
             OrganizationRepository organizations,
-            UserRepository users) {
+            UserRepository users,
+            MongoTemplate mongoTemplate) {
 
         this.subscriptions = subscriptions;
         this.payments = payments;
         this.organizations = organizations;
         this.users = users;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Override
@@ -151,121 +166,257 @@ public class AdminSubscriptionServiceImpl
     }
 
     @Override
-    public Map<String, Object> revenue() {
+    public AdminRevenueDashboardDTO revenue(
+            String from,
+            String to,
+            String plan) {
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime today = now.toLocalDate().atStartOfDay();
+        LocalDateTime monthStart = today.withDayOfMonth(1);
+        LocalDateTime weekStart = today.minusDays(today.getDayOfWeek().getValue() - 1);
 
-        LocalDateTime today =
-                now.toLocalDate().atStartOfDay();
+        LocalDateTime fromDate = parse(from, false);
+        LocalDateTime toDate = parse(to, true);
 
-        LocalDateTime month =
-                today.withDayOfMonth(1);
-
-        LocalDateTime week =
-                today.minusDays(
-                        today.getDayOfWeek().getValue() - 1);
-
-        List<Payment> successfulPayments =
-                payments.findAll()
-                        .stream()
-                        .filter(payment ->
-                                payment.getPaymentStatus()
-                                        == PaymentStatus.SUCCESS)
-                        .toList();
-
-        Map<String, Object> response =
-                new LinkedHashMap<>();
-
-        response.put(
-                "totalRevenue",
-                sum(successfulPayments));
-
-        response.put(
-                "monthlyRevenue",
-                sum(successfulPayments
-                        .stream()
-                        .filter(payment ->
-                                payment.getPaymentDate() != null && !payment.getPaymentDate()
-                                        .isBefore(month))
-                        .toList()));
-
-        response.put(
-                "todayRevenue",
-                sum(successfulPayments
-                        .stream()
-                        .filter(payment ->
-                                payment.getPaymentDate() != null && !payment.getPaymentDate()
-                                        .isBefore(today))
-                        .toList()));
-
-        response.put(
-                "activeSubscriptions",
-                subscriptions.findAll()
-                        .stream()
-                        .filter(subscription ->
-                                subscription.getStatus()
-                                        == SubscriptionStatus.ACTIVE)
-                        .count());
-
-        response.put(
-                "expiredSubscriptions",
-                subscriptions.findAll()
-                        .stream()
-                        .filter(subscription ->
-                                subscription.getStatus()
-                                        == SubscriptionStatus.EXPIRED)
-                        .count());
-
-        for (String plan : subscriptions.findAll().stream()
-                .map(Subscription::getPlan).filter(Objects::nonNull).distinct().toList()) {
-
-            response.put(
-                    plan.toLowerCase() + "Plans",
-
-                    subscriptions.findAll()
-                            .stream()
-                            .filter(subscription ->
-                                    plan.equalsIgnoreCase(subscription.getPlan()))
-                            .count());
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new com.bugflow.exception.BadRequestException("From date cannot be after to date");
         }
 
-        response.put(
-                "renewalsToday",
+        Criteria matchCriteria = Criteria.where("paymentStatus").is(PaymentStatus.SUCCESS);
 
-                successfulPayments.stream()
-                        .filter(payment ->
-                                payment.getPaymentDate() != null && !payment.getPaymentDate()
-                                        .isBefore(today))
-                        .count());
+        if (fromDate != null) {
+            matchCriteria = matchCriteria.and("paymentDate").gte(fromDate);
+        }
 
-        response.put(
-                "renewalsThisWeek",
+        if (toDate != null) {
+            matchCriteria = matchCriteria.and("paymentDate").lte(toDate);
+        }
 
-                successfulPayments.stream()
-                        .filter(payment ->
-                                payment.getPaymentDate() != null && !payment.getPaymentDate()
-                                        .isBefore(week))
-                        .count());
+        if (plan != null && !plan.isBlank()) {
+            matchCriteria = matchCriteria.and("plan").is(plan);
+        }
 
-        response.put(
-                "paymentsToday",
+        Query revenueQuery = new Query(matchCriteria);
 
-                successfulPayments.stream()
-                        .filter(payment ->
-                                payment.getPaymentDate() != null && !payment.getPaymentDate()
-                                        .isBefore(today))
-                        .count());
+        List<Payment> successfulPayments =
+                mongoTemplate.find(revenueQuery, Payment.class);
 
-        response.put(
-                "paymentsThisMonth",
+        AdminRevenueDashboardDTO dto = new AdminRevenueDashboardDTO();
+        dto.totalRevenue = sum(successfulPayments);
+        dto.monthlyRevenue = sum(filterByDate(successfulPayments, monthStart, null));
+        dto.todayRevenue = sum(filterByDate(successfulPayments, today, null));
+        dto.activeSubscriptions = subscriptions.countByStatus(SubscriptionStatus.ACTIVE);
+        dto.expiredSubscriptions = subscriptions.countByStatus(SubscriptionStatus.EXPIRED);
+        dto.renewalsToday = filterByDate(successfulPayments, today, null).size();
+        dto.renewalsThisWeek = filterByDate(successfulPayments, weekStart, null).size();
+        dto.monthlyRevenueChart = buildMonthlyRevenueChart(fromDate, toDate, plan);
+        dto.revenueByPlan = buildRevenueByPlan(fromDate, toDate, plan);
+        dto.planDistribution = buildPlanDistribution(fromDate, toDate, plan);
+        dto.renewalsTrend = buildRenewalsTrend(fromDate, toDate, plan);
 
-                successfulPayments.stream()
-                        .filter(payment ->
-                                payment.getPaymentDate() != null && !payment.getPaymentDate()
-                                        .isBefore(month))
-                        .count());
+        return dto;
+    }
 
-        return response;
+    private List<Payment> filterByDate(
+            List<Payment> payments,
+            LocalDateTime start,
+            LocalDateTime end) {
+
+        return payments.stream()
+                .filter(payment -> payment.getPaymentDate() != null)
+                .filter(payment -> !payment.getPaymentDate().isBefore(start))
+                .filter(payment -> end == null || !payment.getPaymentDate().isAfter(end))
+                .toList();
+    }
+
+    private List<RevenueValueDTO> buildMonthlyRevenueChart(
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String plan) {
+
+        LocalDate startDate = fromDate != null
+                ? fromDate.toLocalDate().withDayOfMonth(1)
+                : LocalDate.now().withDayOfMonth(1).minusMonths(5);
+
+        LocalDate endDate = toDate != null
+                ? toDate.toLocalDate()
+                : LocalDate.now();
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
+                Aggregation.project("amount", "paymentDate")
+                        .andExpression("year(paymentDate)").as("year")
+                        .andExpression("month(paymentDate)").as("month"),
+                Aggregation.group("year", "month").sum("amount").as("revenue"),
+                Aggregation.project("revenue").and("_id.year").as("year").and("_id.month").as("month"),
+                Aggregation.sort(Sort.by(Sort.Direction.ASC, "year", "month")));
+
+        List<Document> grouped =
+                mongoTemplate.aggregate(aggregation, Payment.class, Document.class).getMappedResults();
+
+                List<RevenueValueDTO> monthlySeries = new java.util.ArrayList<>();
+                for (Document doc : grouped) {
+                        Integer year = toInteger(doc.get("year"));
+                        Integer monthValue = toInteger(doc.get("month"));
+                        BigDecimal revenue = toBigDecimal(doc.get("revenue"));
+                        if (year != null && monthValue != null) {
+                                String label = String.format("%04d-%02d", year, monthValue);
+                                monthlySeries.add(new RevenueValueDTO(label, revenue == null ? BigDecimal.ZERO : revenue));
+                        }
+                }
+
+        return fillMonthlyChart(startDate, endDate, monthlySeries);
+    }
+
+    private List<RevenueValueDTO> buildRevenueByPlan(
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String plan) {
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
+                Aggregation.group("plan").sum("amount").as("value"),
+                Aggregation.project("value").and("_id").as("label"),
+                Aggregation.sort(Sort.by(Sort.Direction.ASC, "label")));
+
+        List<Document> docs = mongoTemplate.aggregate(aggregation, Payment.class, Document.class).getMappedResults();
+        List<RevenueValueDTO> result = new java.util.ArrayList<>();
+        for (Document doc : docs) {
+            String label = doc.getString("label");
+            BigDecimal value = toBigDecimal(doc.get("value"));
+            result.add(new RevenueValueDTO(label, value == null ? BigDecimal.ZERO : value));
+        }
+
+        return result;
+    }
+
+    private List<PlanCountDTO> buildPlanDistribution(
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String plan) {
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
+                Aggregation.group("plan").count().as("count"),
+                Aggregation.project("count").and("_id").as("plan"),
+                Aggregation.sort(Sort.by(Sort.Direction.ASC, "plan")));
+
+        return mongoTemplate.aggregate(aggregation, Payment.class, PlanCountDTO.class).getMappedResults();
+    }
+
+    private List<RenewalsTrendDTO> buildRenewalsTrend(
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String plan) {
+
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+
+        LocalDate startDate = fromDate != null
+                ? fromDate.toLocalDate()
+                : LocalDate.now().minusDays(29);
+
+        LocalDate endDate = toDate != null
+                ? toDate.toLocalDate()
+                : LocalDate.now();
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(buildPaymentCriteria(fromDate, toDate, plan)),
+                Aggregation.project("paymentDate")
+                        .andExpression("year(paymentDate)").as("year")
+                        .andExpression("month(paymentDate)").as("month")
+                        .andExpression("dayOfMonth(paymentDate)").as("day"),
+                Aggregation.group("year", "month", "day").count().as("renewals"),
+                Aggregation.project("renewals").and("_id.year").as("year").and("_id.month").as("month").and("_id.day").as("day"),
+                Aggregation.sort(Sort.by(Sort.Direction.ASC, "year", "month", "day")));
+
+        List<Document> raw = mongoTemplate.aggregate(aggregation, Payment.class, Document.class).getMappedResults();
+        List<RenewalsTrendDTO> trend = new java.util.ArrayList<>();
+
+        for (Document doc : raw) {
+            Integer year = toInteger(doc.get("year"));
+            Integer monthValue = toInteger(doc.get("month"));
+            Integer day = toInteger(doc.get("day"));
+            Long renewals = toLong(doc.get("renewals"));
+            if (year != null && monthValue != null && day != null) {
+                String date = LocalDate.of(year, monthValue, day).format(formatter);
+                trend.add(new RenewalsTrendDTO(date, renewals == null ? 0L : renewals));
+            }
+        }
+
+        return fillRenewalsTrend(startDate, endDate, trend, formatter);
+    }
+
+    private Criteria buildPaymentCriteria(
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String plan) {
+
+        Criteria criteria = Criteria.where("paymentStatus").is(PaymentStatus.SUCCESS);
+
+        if (fromDate != null) {
+            criteria = criteria.and("paymentDate").gte(fromDate);
+        }
+
+        if (toDate != null) {
+            criteria = criteria.and("paymentDate").lte(toDate);
+        }
+
+        if (plan != null && !plan.isBlank()) {
+            criteria = criteria.and("plan").is(plan);
+        }
+
+        return criteria;
+    }
+
+    private List<RevenueValueDTO> fillMonthlyChart(
+            LocalDate startDate,
+            LocalDate endDate,
+            List<RevenueValueDTO> grouped) {
+
+        Map<String, BigDecimal> revenueByKey = grouped.stream()
+                .filter(item -> item.label != null)
+                .collect(
+                        java.util.stream.Collectors.toMap(
+                                item -> item.label,
+                                item -> item.value == null ? BigDecimal.ZERO : item.value));
+
+        List<RevenueValueDTO> result = new java.util.ArrayList<>();
+        LocalDate current = startDate;
+
+        while (!current.isAfter(endDate)) {
+            String monthKey = String.format("%04d-%02d", current.getYear(), current.getMonthValue());
+            result.add(new RevenueValueDTO(monthKey, revenueByKey.getOrDefault(monthKey, BigDecimal.ZERO)));
+            current = current.plusMonths(1);
+        }
+
+        return result;
+    }
+
+    private List<RenewalsTrendDTO> fillRenewalsTrend(
+            LocalDate startDate,
+            LocalDate endDate,
+            List<RenewalsTrendDTO> raw,
+            DateTimeFormatter formatter) {
+
+        Map<String, Long> trendByDate = raw.stream()
+                .filter(item -> item.date != null)
+                .collect(
+                        java.util.stream.Collectors.toMap(
+                                item -> item.date,
+                                item -> item.renewals,
+                                Long::sum));
+
+        List<RenewalsTrendDTO> result = new java.util.ArrayList<>();
+        LocalDate current = startDate;
+
+        while (!current.isAfter(endDate)) {
+            String dateKey = current.format(formatter);
+            result.add(new RenewalsTrendDTO(dateKey, trendByDate.getOrDefault(dateKey, 0L)));
+            current = current.plusDays(1);
+        }
+
+        return result;
     }
 
         private AdminSubscriptionDTO map(Subscription subscription) {
@@ -484,6 +635,48 @@ public class AdminSubscriptionServiceImpl
                         java.math.BigDecimal.ZERO,
                         java.math.BigDecimal::add);
     }
+
+        private BigDecimal toBigDecimal(Object value) {
+                if (value == null) return null;
+                if (value instanceof BigDecimal) return (BigDecimal) value;
+                if (value instanceof Decimal128) return ((Decimal128) value).bigDecimalValue();
+                if (value instanceof Number) {
+                        Number n = (Number) value;
+                        if (n instanceof Long || n instanceof Integer || n instanceof Short || n instanceof Byte) {
+                                return BigDecimal.valueOf(n.longValue());
+                        }
+                        return BigDecimal.valueOf(n.doubleValue());
+                }
+                try {
+                        return new BigDecimal(value.toString());
+                } catch (Exception ex) {
+                        return null;
+                }
+        }
+
+        private Integer toInteger(Object value) {
+                if (value == null) return null;
+                if (value instanceof Number n) {
+                        return n.intValue();
+                }
+                try {
+                        return Integer.parseInt(value.toString());
+                } catch (Exception ex) {
+                        return null;
+                }
+        }
+
+        private Long toLong(Object value) {
+                if (value == null) return null;
+                if (value instanceof Number n) {
+                        return n.longValue();
+                }
+                try {
+                        return Long.parseLong(value.toString());
+                } catch (Exception ex) {
+                        return null;
+                }
+        }
 
     private String name(Enum<?> value) {
         return value == null ? null : value.name();

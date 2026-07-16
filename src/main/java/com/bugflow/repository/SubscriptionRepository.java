@@ -16,4 +16,6 @@ public interface SubscriptionRepository extends MongoRepository<Subscription, St
     Optional<Subscription> findByOwnerId(String ownerId);
 
     List<Subscription> findByStatusAndEndDateLessThanEqual(SubscriptionStatus status, LocalDateTime endDate);
+
+    long countByStatus(SubscriptionStatus status);
 }

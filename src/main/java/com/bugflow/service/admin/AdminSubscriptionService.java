@@ -1,8 +1,7 @@
 package com.bugflow.service.admin;
 
-import java.util.Map;
-
 import com.bugflow.dto.admin.AdminPaymentDTO;
+import com.bugflow.dto.admin.AdminRevenueDashboardDTO;
 import com.bugflow.dto.admin.AdminSubscriptionDTO;
 import com.bugflow.dto.admin.PageResponseDTO;
 
@@ -27,5 +26,8 @@ public interface AdminSubscriptionService {
             int page,
             int size);
 
-    Map<String, Object> revenue();
+    AdminRevenueDashboardDTO revenue(
+            String from,
+            String to,
+            String plan);
 }
