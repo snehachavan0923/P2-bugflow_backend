@@ -1,5 +1,7 @@
 HELP.md
 target/
+application.properties
+
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -25,15 +27,11 @@ target/
 /dist/
 /nbdist/
 /.nb-gradle/
+
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
-.DS_Store
-.DS_Store
-.DS_Store
-.DS_Store
-.DS_Store
 .DS_Store
