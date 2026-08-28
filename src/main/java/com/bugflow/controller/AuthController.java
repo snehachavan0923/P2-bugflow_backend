@@ -4,12 +4,15 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.bugflow.service.AuthService;
 import com.bugflow.dto.LoginRequest;
 import com.bugflow.dto.SignupRequest;
 import com.bugflow.entity.User;
+import com.bugflow.service.AuthService;
 
 
 @RestController
@@ -31,4 +34,14 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+
+  @PostMapping("/auth0")
+    public ResponseEntity<Map<String, Object>> auth0Login(
+        @RequestBody com.bugflow.dto.Auth0LoginRequest request) {
+
+    Map<String, Object> response =
+            authService.loginWithAuth0(request.getAccessToken());
+
+    return ResponseEntity.ok(response);
+}
 }
