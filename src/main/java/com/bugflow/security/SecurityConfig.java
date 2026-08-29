@@ -92,10 +92,10 @@ public class SecurityConfig {
             	            "/projects")
             	    .hasRole("Owner")
 
-					    // Owner can change their own profile password
+					    // All authenticated users can change their own profile password
 					    .requestMatchers(HttpMethod.PUT,
 						    "/users/profile/password")
-					    .hasRole("Owner")
+					    .authenticated()
 
 					    .requestMatchers(HttpMethod.POST,
 						    "/projects/*/team")

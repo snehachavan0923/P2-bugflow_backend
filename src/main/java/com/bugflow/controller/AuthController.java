@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bugflow.dto.ForgotPasswordRequest;
 import com.bugflow.dto.LoginRequest;
+import com.bugflow.dto.ResetPasswordRequest;
 import com.bugflow.dto.SignupRequest;
 import com.bugflow.entity.User;
 import com.bugflow.service.AuthService;
+import com.bugflow.service.PasswordResetService;
 
 
 @RestController
@@ -21,6 +24,9 @@ public class AuthController {
  
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     @PostMapping("/signup")
     public ResponseEntity<User> signup(@RequestBody SignupRequest request) {
@@ -35,13 +41,29 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-  @PostMapping("/auth0")
+    @PostMapping("/auth0")
     public ResponseEntity<Map<String, Object>> auth0Login(
-        @RequestBody com.bugflow.dto.Auth0LoginRequest request) {
+            @RequestBody com.bugflow.dto.Auth0LoginRequest request) {
 
-    Map<String, Object> response =
-            authService.loginWithAuth0(request.getAccessToken());
+        Map<String, Object> response =
+                authService.loginWithAuth0(request.getAccessToken());
 
-    return ResponseEntity.ok(response);
-}
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        String message = passwordResetService.requestPasswordReset(request);
+        Map<String, String> response = new java.util.HashMap<>();
+        response.put("message", message);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        String message = passwordResetService.resetPassword(request);
+        Map<String, String> response = new java.util.HashMap<>();
+        response.put("message", message);
+        return ResponseEntity.ok(response);
+    }
 }

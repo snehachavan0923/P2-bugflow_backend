@@ -1,5 +1,7 @@
 package com.bugflow.service;
 
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -35,6 +37,46 @@ public class MailService {
         this.projectRepository = projectRepository;
     }
 
+    public void sendPasswordResetEmail(String toEmail, String resetUrl, int expirationMinutes) {
+        String subject = "Reset your BugFlow password";
+        String body = "<html>"
+                + "<body style=\"margin:0;padding:0;background:#f5faff;font-family:Arial,sans-serif;color:#0f172a;\">"
+                + "<div style=\"max-width:560px;margin:32px auto;background:#ffffff;border:1px solid #dbeafe;border-radius:12px;overflow:hidden;\">"
+                + "<div style=\"padding:24px 24px 10px 24px;\">"
+                + "<div style=\"font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#2563eb;\">BugFlow</div>"
+                + "</div>"
+                + "<div style=\"padding:0 24px 20px 24px;\">"
+                + "<h2 style=\"margin:0 0 12px 0;font-size:28px;line-height:1.3;color:#0f172a;\">Reset your password</h2>"
+                + "<p style=\"margin:0 0 18px 0;font-size:16px;line-height:1.6;color:#475569;\">Hi,</p>"
+                + "<p style=\"margin:0 0 18px 0;font-size:16px;line-height:1.6;color:#475569;\">We received a request to reset your BugFlow password.</p>"
+                + "<p style=\"margin:0 0 20px 0;font-size:16px;line-height:1.6;color:#475569;\">Click the button below to choose a new password.</p>"
+                + "<p style=\"margin:0 0 20px 0;\"><a href=\"" + resetUrl + "\" style=\"display:inline-block;padding:9px 16px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:7px;font-size:14px;font-weight:600;line-height:1.4;\">Reset Password</a></p>"
+                + "<p style=\"margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#475569;\">This link will expire in " + expirationMinutes + " minutes.</p>"
+                + "<p style=\"margin:0 0 18px 0;font-size:14px;line-height:1.6;color:#475569;\">If you did not request a password reset, you can safely ignore this email.</p>"
+                + "<p style=\"margin:0;font-size:14px;line-height:1.6;color:#475569;\">Thanks,<br/>The BugFlow Team</p>"
+                + "</div>"
+                + "</div>"
+                + "</body>"
+                + "</html>";
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+
+            String from = mailFrom != null && !mailFrom.isBlank() ? mailFrom : null;
+            if (from != null) {
+                helper.setFrom(from);
+            }
+
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(body, true);
+            mailSender.send(message);
+        } catch (MessagingException ex) {
+            throw new IllegalStateException("Failed to send password reset email", ex);
+        }
+    }
+
     public void sendInvitationEmail(Invitation invitation) throws MessagingException {
 
         Organization org = organizationRepository.findById(invitation.getOrganizationId()).orElse(null);
@@ -54,7 +96,7 @@ public class MailService {
         // Relative expiry
         String relative = "";
         if (invitation.getExpiresAt() != null) {
-            java.time.Duration dur = java.time.Duration.between(java.time.LocalDateTime.now(), invitation.getExpiresAt());
+            Duration dur = Duration.between(java.time.LocalDateTime.now(), invitation.getExpiresAt());
             long days = dur.toDays();
             if (dur.isNegative()) {
                 relative = "(Expired)";

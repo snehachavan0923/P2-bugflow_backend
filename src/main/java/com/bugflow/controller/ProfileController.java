@@ -3,7 +3,6 @@ package com.bugflow.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,15 +28,15 @@ public class ProfileController {
     private PasswordEncoder passwordEncoder;
 
     @PutMapping("/password")
-    public ResponseEntity<String> changePassword(@Valid @RequestBody UpdatePasswordRequest request) {
+    public ResponseEntity<String> changePassword(
+            @Valid @RequestBody UpdatePasswordRequest request,
+            Authentication authentication) {
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if (auth == null || auth.getName() == null) {
+        if (authentication == null || authentication.getName() == null) {
             throw new BadRequestException("Unable to determine current user");
         }
 
-        String email = auth.getName();
+        String email = authentication.getName();
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
