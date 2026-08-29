@@ -119,7 +119,15 @@ public class ProjectMemberService {
         member.setName(user.getName());
         member.setEmail(user.getEmail());
 
-        member.setRole(request.getRole());
+                // For existing users, derive the project role from the user's organization-level role.
+                // This preserves a single source of truth for a user's role and prevents projects
+                // from assigning conflicting roles. Only use the request role when creating a
+                // brand-new user (user == null above) — in that case user role is set from request.
+                if (user != null) {
+                        member.setRole(user.getRole());
+                } else {
+                        member.setRole(request.getRole());
+                }
         member.setOrganizationId(
                 project.getOrganizationId());
 

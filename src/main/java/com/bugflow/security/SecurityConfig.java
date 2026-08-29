@@ -44,8 +44,17 @@ public class SecurityConfig {
             	    .requestMatchers(HttpMethod.OPTIONS, "/**")
             	    .permitAll()
 
-            	    .requestMatchers("/auth/**")
-            	    .permitAll()
+					    .requestMatchers("/auth/**")
+					    .permitAll()
+
+					    // Invitation endpoints: public so invitees (no JWT) can view and accept
+					    .requestMatchers(HttpMethod.GET,
+						    "/invitations/info")
+					    .permitAll()
+
+					    .requestMatchers(HttpMethod.POST,
+						    "/invitations/accept")
+					    .permitAll()
             	    
             	    .requestMatchers(
             	            HttpMethod.POST,
@@ -88,9 +97,14 @@ public class SecurityConfig {
 						    "/users/profile/password")
 					    .hasRole("Owner")
 
-            	    .requestMatchers(HttpMethod.POST,
-            	            "/projects/*/team")
-            	    .hasRole("Owner")
+					    .requestMatchers(HttpMethod.POST,
+						    "/projects/*/team")
+					    .hasRole("Owner")
+
+					    // Only Owners may create project invitations
+					    .requestMatchers(HttpMethod.POST,
+						    "/projects/*/invitations")
+					    .hasRole("Owner")
 
             	    .requestMatchers(HttpMethod.PUT,
             	            "/projects/*/team/*")

@@ -1,10 +1,14 @@
 package com.bugflow.exception;
 
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
-import jakarta.servlet.http.HttpServletRequest;
-
 import java.time.LocalDateTime;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -144,6 +148,23 @@ public class GlobalExceptionHandler {
                         LocalDateTime.now()
                 ),
                 HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(
+            MaxUploadSizeExceededException ex,
+            HttpServletRequest request
+    ) {
+        return new ResponseEntity<>(
+                new ApiError(
+                        HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                        "Payload Too Large",
+                        "File size exceeds the maximum allowed limit of 10 MB.",
+                        request.getRequestURI(),
+                        LocalDateTime.now()
+                ),
+                HttpStatus.PAYLOAD_TOO_LARGE
         );
     }
     
