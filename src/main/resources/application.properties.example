@@ -1,0 +1,43 @@
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=20MB
+spring.application.name=bugflow-backend
+
+# MongoDB Configuration
+# Provide your MongoDB Atlas or local MongoDB connection URI via MONGODB_URI environment variable
+# Format: mongodb+srv://<username>:<password>@<cluster-url>/?appName=<app-name>
+spring.data.mongodb.uri=${MONGODB_URI}
+spring.data.mongodb.database=${MONGODB_DATABASE:bugflow}
+
+server.port=${PORT:8081}
+logging.level.org.springframework.web=DEBUG
+
+# Cloudinary Configuration (File Uploads)
+cloudinary.cloud_name=${CLOUDINARY_CLOUD_NAME}
+cloudinary.api_key=${CLOUDINARY_API_KEY}
+cloudinary.api_secret=${CLOUDINARY_API_SECRET}
+
+# Auth0 Configuration
+auth0.domain=${AUTH0_DOMAIN}
+auth0.audience=${AUTH0_AUDIENCE}
+
+# BugFlow JWT Configuration
+# Provide a 256-bit (or stronger) HMAC SHA-256 secret key via JWT_SECRET
+jwt.secret=${JWT_SECRET}
+# Expiration in milliseconds (24 hours = 86400000)
+jwt.expiration=${JWT_EXPIRATION:86400000}
+
+# Mail Configuration (SMTP)
+spring.mail.host=${SPRING_MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${SPRING_MAIL_PORT:587}
+spring.mail.username=${SPRING_MAIL_USERNAME}
+spring.mail.password=${SPRING_MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.default-encoding=UTF-8
+
+# Mail Sender
+mail.from=${MAIL_FROM}
+
+# Frontend Base URL (for invitation / reset links)
+frontend.base-url=${FRONTEND_BASE_URL:http://localhost:3000}

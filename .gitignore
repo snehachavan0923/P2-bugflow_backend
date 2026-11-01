@@ -1,6 +1,18 @@
 HELP.md
 target/
+
+# Application configuration containing sensitive data
 application.properties
+**/application.properties
+**/application-*.properties
+!**/application.properties.example
+!**/application-*.properties.example
+
+# Environment variable files
+.env
+.env.*
+.env.local
+!.env.example
 
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
